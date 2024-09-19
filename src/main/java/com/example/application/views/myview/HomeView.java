@@ -6,12 +6,15 @@ import com.example.application.views.MainLayout;
 import com.vaadin.componentfactory.Popup;
 import com.vaadin.flow.component.ClientCallable;
 import com.vaadin.flow.component.Composite;
+import com.vaadin.flow.component.Text;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.listbox.ListBox;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.dom.Style;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -42,6 +45,8 @@ public class HomeView extends Composite<VerticalLayout> {
     @Autowired
     private final AvailabilityServiceImpl availabilityService;
 
+    private FullCalendar calendar;
+
     private Popup popup;
 
     public HomeView(@Autowired AvailabilityServiceImpl userService) {
@@ -50,7 +55,9 @@ public class HomeView extends Composite<VerticalLayout> {
         getContent().getStyle().set("flex-grow", "1");
         getContent().setHeight("100%");
 
-        H1 title = new H1("Bienvenue sur l'application de gestion de projet");
+        H1 title = new H1("Bibliothèque Anne-Marie Doyon");
+        title.getStyle().set("text-align", "center");
+        title.getStyle().setWidth("100%");
 
         getContent().add(title);
 
@@ -69,14 +76,13 @@ public class HomeView extends Composite<VerticalLayout> {
         initialOptions.put("selectable", true);
 
 
-        FullCalendar calendar = FullCalendarBuilder.create().withInitialOptions(initialOptions).build();
-        calendar.setTimezone(new Timezone(ZoneId.of("America/Montreal")));
+        calendar= FullCalendarBuilder.create().withInitialOptions(initialOptions).build();
+        //calendar.setTimezone(//new Timezone(ZoneId.of("America/Montreal")));
 
         calendar.setWidth("100%");
         calendar.setLocale(Locale.CANADA_FRENCH);
-        calendar.addEntryClickedListener(event -> {
-            Notification.show("Entry clicked: " + event.getEntry().getTitle());
-        });
+
+       // if (UI.getCurrent().)
 
         // Définir l'identifiant des éléments d'entrée
         calendar.setEntryDidMountCallback("""
@@ -86,14 +92,12 @@ public class HomeView extends Composite<VerticalLayout> {
 
         // Ajouter un écouteur pour les clics sur les entrées
         calendar.addEntryClickedListener(event -> {
-            openContextMenu(event.getEntry().getId());
+            openContextMenu(event.getEntry().getId(), event.getEntry().getDescription());
         });
-
-        initPopup();
 
         //ajout des events
         // Récupérer les disponibilités confirmées depuis la base de données
-        LocalDate currentDate = LocalDate.now(ZoneId.of("America/Montreal"));
+        LocalDate currentDate = LocalDate.now(); // ZoneId.of("America/Montreal")
         LocalDate endOfMonth = currentDate.withDayOfMonth(currentDate.lengthOfMonth());
         List<Availability> availabilities = availabilityService.findAvailabilitiesByStatusAndDateBetween("Confirmed", currentDate, endOfMonth );
 
@@ -123,12 +127,21 @@ public class HomeView extends Composite<VerticalLayout> {
                 // Set the color based on the type
                 if ("heureOuverture".equals(availability.getType())) {
                     entry.setColor("green");
+
+                    // Set the title of the entry
+                    entry.setTitle(availability.getTitle());
+
+                    entry.setDescription("Ouvert de " + time.toString() + " à " + time.plusMinutes(availability.getDuration()).toString());
                 } else {
                     entry.setColor("orange");
+
+                    // Set the title of the entry
+                    entry.setTitle(availability.getTitle());
+
+                    entry.setDescription(entry.getTitle() + "\n"+ "De " + time.toString() + " à " + time.plusMinutes(availability.getDuration()).toString() + "\n\n" + availability.getDetails());
                 }
 
-                // Set the title of the entry
-                entry.setTitle(availability.getTitle() + " de " + time.toString() + " à " + time.plusMinutes(availability.getDuration()).toString());
+
 
                 // Add the entry to the calendar
                 calendar.getEntryProvider().asInMemory().addEntry(entry);
@@ -159,23 +172,21 @@ public class HomeView extends Composite<VerticalLayout> {
     }
 
 
-    public void openContextMenu (String id){
+    public void openContextMenu (String id, String description){
         initPopup(); // init the popp
 
         popup.removeAll(); // remove old content
 
+        popup.getStyle().setPadding("1em");
 
-        // setup the context menu
-        // (side note: the list box shows a checkmark, when selecting an item, therefore you may want to use a different
-        // component for a real application or hide the checkmark with CSS)
-        ListBox<String> listBox = new ListBox<>();
-        listBox.setItems("Option A", "Option B", "Option C");
-        listBox.addValueChangeListener(event -> {
-            Notification.show("Selected " + event.getValue());
-            popup.hide();
-        });
+        TextArea durationEvent = new TextArea();
+        durationEvent.setReadOnly(true);
+        durationEvent.setValue(description);
+        durationEvent.setWidth("100%");
+        //durationEvent.getStyle().setPadding("0.5em");
+        //durationEvent.setText(description);
 
-        popup.add(listBox);
+        popup.add(durationEvent);
         popup.setFor("entry-" + id);
 
         popup.show();

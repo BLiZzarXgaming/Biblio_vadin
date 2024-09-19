@@ -3,10 +3,7 @@ package com.example.application.views;
 import com.example.application.config.SecurityService;
 import com.example.application.identification_user.MyUserPrincipal;
 import com.example.application.service.AvailabilityService;
-import com.example.application.views.myview.HomeView;
-import com.example.application.views.myview.testa1;
-import com.example.application.views.myview.testb1;
-import com.example.application.views.myview.testm1;
+import com.example.application.views.myview.*;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -72,6 +69,7 @@ public class MainLayout extends AppLayout {
         SideNav nav = new SideNav();
 
         nav.addItem(new SideNavItem("Accueil", HomeView.class));
+        nav.addItem(new SideNavItem("Catalogue", CatalogueView.class));
         nav.addItem(new SideNavItem("Testa1", testa1.class));
         nav.addItem(new SideNavItem("Testb1", testb1.class));
         nav.addItem(new SideNavItem("Testm1", testm1.class));

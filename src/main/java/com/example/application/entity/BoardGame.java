@@ -33,4 +33,60 @@ public class BoardGame {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at")
     private Date updatedAt;
+
+    public Long getItemId() {
+        return itemId;
+    }
+
+    public void setItemId(Long itemId) {
+        this.itemId = itemId;
+    }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public void setItem(Item item) {
+        this.item = item;
+    }
+
+    public int getNumberOfPieces() {
+        return numberOfPieces;
+    }
+
+    public void setNumberOfPieces(int numberOfPieces) {
+        this.numberOfPieces = numberOfPieces;
+    }
+
+    public int getRecommendedAge() {
+        return recommendedAge;
+    }
+
+    public void setRecommendedAge(int recommendedAge) {
+        this.recommendedAge = recommendedAge;
+    }
+
+    public String getGameRules() {
+        return gameRules;
+    }
+
+    public void setGameRules(String gameRules) {
+        this.gameRules = gameRules;
+    }
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Date getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Date updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }
