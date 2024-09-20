@@ -162,4 +162,24 @@ public class Item {
     public void setBoardGame(BoardGame boardGame) {
         this.boardGame = boardGame;
     }
+
+
+    public Item() {
+    }
+
+    public Item(Long id, String type, String title, double value, Date createdAt, Date updatedAt, Set<Copy> copies, Category category, Publisher publisher, Supplier supplier, Book book, Magazine magazine, BoardGame boardGame) {
+        this.id = id;
+        this.type = type;
+        this.title = title;
+        this.value = value;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.copies = copies;
+        this.category = category;
+        this.publisher = publisher;
+        this.supplier = supplier;
+        this.book = book;
+        this.magazine = magazine;
+        this.boardGame = boardGame;
+    }
 }

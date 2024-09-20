@@ -89,4 +89,17 @@ public class BoardGame {
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public BoardGame() {
+    }
+
+    public BoardGame(Long itemId, Item item, int numberOfPieces, int recommendedAge, String gameRules, Date createdAt, Date updatedAt) {
+        this.itemId = itemId;
+        this.item = item;
+        this.numberOfPieces = numberOfPieces;
+        this.recommendedAge = recommendedAge;
+        this.gameRules = gameRules;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 }

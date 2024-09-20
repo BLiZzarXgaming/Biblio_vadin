@@ -90,4 +90,17 @@ public class Magazine {
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public Magazine() {
+    }
+
+    public Magazine(Long itemId, Item item, String isni, String month, Date publicationDate, Date createdAt, Date updatedAt) {
+        this.itemId = itemId;
+        this.item = item;
+        this.isni = isni;
+        this.month = month;
+        this.publicationDate = publicationDate;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 }

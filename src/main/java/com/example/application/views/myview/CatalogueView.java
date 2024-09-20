@@ -8,16 +8,20 @@ import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.provider.CallbackDataProvider;
+import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Month;
 import java.time.format.TextStyle;
@@ -29,8 +33,12 @@ import java.util.stream.Collectors;
 @AnonymousAllowed
 public class CatalogueView extends VerticalLayout {
     private ComboBox<String> typeComboBox;
-    private VerticalLayout searchFieldsLayout;
+    private FormLayout searchFieldsLayout;
+
     private Button searchButton;
+    private Button hideSearchButton;
+    private Boolean searchFieldsVisible = true;
+
     private Grid<Item> resultsGrid;
     private CallbackDataProvider<Item, Void> dataProvider;
 
@@ -40,13 +48,31 @@ public class CatalogueView extends VerticalLayout {
     private String selectedType;
     private Map<String, Object> searchCriteria = new HashMap<>();
 
-    public CatalogueView(ItemServiceImpl itemService) {
+
+    // Champs de recherche pour les différents types d'items
+    private TextField titleField ;
+    private TextField authorField ;
+    private TextField isbnField ;
+    private DatePicker publicationDateField ;
+    private ComboBox<Category> categoryComboBox ;
+    private ComboBox<Publisher> publisherComboBox ;
+
+    private TextField keywordField;
+
+    private TextField isniField ;
+    private ComboBox<String> monthComboBox ;
+
+    private IntegerField numberOfPiecesField ;
+    private IntegerField recommendedAgeField ;
+
+
+    public CatalogueView(@Autowired ItemServiceImpl itemService) {
         this.itemService = itemService;
         setWidth("100%");
         getStyle().set("flex-grow", "1");
         setHeight("100%");
         configureComponents();
-        add(createSearchLayout());
+        //add(createSearchLayout());
     }
 
     private void configureComponents() {
@@ -55,12 +81,21 @@ public class CatalogueView extends VerticalLayout {
         typeComboBox.setItems("Tous", "Livre", "Revue", "Jeu");
         typeComboBox.setValue("Tous");
 
-        searchFieldsLayout = new VerticalLayout();
-        searchFieldsLayout.setSpacing(false);
-        searchFieldsLayout.setPadding(false);
+        searchFieldsLayout = new FormLayout();
+        searchFieldsLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2), new FormLayout.ResponsiveStep("500px", 3));
 
         searchButton = new Button("Rechercher", e -> searchItems());
 
+        hideSearchButton = new Button("Masquer", e -> {
+            searchFieldsLayout.setVisible(!searchFieldsVisible);
+            searchFieldsVisible = !searchFieldsVisible;
+            hideSearchButton.setText((searchFieldsVisible ? "Masquer" : "Afficher"));
+        });
+
+        searchButton.setWidth("60%");
+        hideSearchButton.setWidth("60%");
+
+        add(createSearchLayout());
         configureGrid();
     }
 
@@ -73,8 +108,25 @@ public class CatalogueView extends VerticalLayout {
         // Initialisation des champs de recherche
         updateSearchFields();
 
-        layout.add(typeComboBox, searchFieldsLayout, searchButton);
+        HorizontalLayout buttonsLayout = new HorizontalLayout(searchButton, hideSearchButton);
+
+        layout.add(typeComboBox, searchFieldsLayout, buttonsLayout);
         return layout;
+    }
+
+    private void updateCategoryComboBox() {
+        List<Category> categories = itemService.getAllCategories();
+        ListDataProvider<Category> dataProviderCategory = new ListDataProvider<>(categories);
+        categoryComboBox.setItemLabelGenerator(Category::getName);
+        categoryComboBox.setItems(dataProviderCategory);
+    }
+
+    private void updatePublisherComboBox() {
+        List<Publisher> publishers = itemService.getAllPublishers();
+        ListDataProvider<Publisher> dataProviderPublisher = new ListDataProvider<>(publishers);
+        publisherComboBox.setItemLabelGenerator(Publisher::getName);
+        publisherComboBox.setItems(dataProviderPublisher);
+
     }
 
     private void updateSearchFields() {
@@ -96,14 +148,16 @@ public class CatalogueView extends VerticalLayout {
     private void createBookSearchFields() {
         searchCriteria.clear();
 
-        TextField titleField = new TextField("Titre");
-        TextField authorField = new TextField("Auteur");
-        TextField isbnField = new TextField("ISBN");
-        DatePicker publicationDateField = new DatePicker("Date de Publication");
-        ComboBox<Category> categoryComboBox = new ComboBox<>("Catégorie");
-        categoryComboBox.setItems(itemService.getAllCategories());
-        ComboBox<Publisher> publisherComboBox = new ComboBox<>("Éditeur");
-        publisherComboBox.setItems(itemService.getAllPublishers());
+        this.titleField = new TextField("Titre");
+        this.authorField = new TextField("Auteur");
+        this.isbnField = new TextField("ISBN");
+        this.publicationDateField = new DatePicker("Date de Publication");
+        this.categoryComboBox = new ComboBox<>("Catégorie");
+
+        updateCategoryComboBox();
+
+        this.publisherComboBox = new ComboBox<>("Éditeur");
+        updatePublisherComboBox();
 
         searchFieldsLayout.add(titleField, authorField, isbnField, publicationDateField, categoryComboBox, publisherComboBox);
     }
@@ -111,26 +165,21 @@ public class CatalogueView extends VerticalLayout {
     private void createMagazineSearchFields() {
         searchCriteria.clear();
 
-        TextField titleField = new TextField("Titre");
-        TextField isniField = new TextField("ISNI");
-        ComboBox<String> monthComboBox = new ComboBox<>("Mois de Publication");
+        this.titleField = new TextField("Titre");
+        this.isniField = new TextField("ISNI");
+        this.monthComboBox = new ComboBox<>("Mois de Publication");
 
         monthComboBox.setItems(Arrays.stream(Month.values())
                 .map(month -> month.getDisplayName(TextStyle.FULL, Locale.FRENCH))
                 .collect(Collectors.toList())); //TODO voir solutions
 
-        DatePicker publicationDateField = new DatePicker("Date de Publication");
-        ComboBox<Category> categoryComboBox = new ComboBox<>("Catégorie");
-        List<Category> categories = itemService.getAllCategories();
+        this.publicationDateField = new DatePicker("Date de Publication");
+        this.categoryComboBox = new ComboBox<>("Catégorie");
 
-        // Crée un DataProvider à partir de la liste de catégories
-        ListDataProvider<Category> dataProviderCategory = new ListDataProvider<>(categories);
+        updateCategoryComboBox();
 
-        categoryComboBox.setItemLabelGenerator(Category::getName);
-
-        categoryComboBox.setItems(dataProviderCategory);
-        ComboBox<Publisher> publisherComboBox = new ComboBox<>("Éditeur");
-        publisherComboBox.setItems(itemService.getAllPublishers());
+        this.publisherComboBox = new ComboBox<>("Éditeur");
+        updatePublisherComboBox();
 
         searchFieldsLayout.add(titleField, isniField, monthComboBox, publicationDateField, categoryComboBox, publisherComboBox);
     }
@@ -138,13 +187,13 @@ public class CatalogueView extends VerticalLayout {
     private void createGameSearchFields() {
         searchCriteria.clear();
 
-        TextField titleField = new TextField("Titre");
-        IntegerField numberOfPiecesField = new IntegerField("Nombre de Pièces");
-        IntegerField recommendedAgeField = new IntegerField("Âge Recommandé");
-        ComboBox<Category> categoryComboBox = new ComboBox<>("Catégorie");
-        categoryComboBox.setItems(itemService.getAllCategories());
-        ComboBox<Publisher> publisherComboBox = new ComboBox<>("Éditeur");
-        publisherComboBox.setItems(itemService.getAllPublishers());
+        this.titleField = new TextField("Titre");
+        this.numberOfPiecesField = new IntegerField("Nombre de Pièces");
+        this.recommendedAgeField = new IntegerField("Âge Recommandé");
+        this.categoryComboBox = new ComboBox<>("Catégorie");
+        updateCategoryComboBox();
+        this.publisherComboBox = new ComboBox<>("Éditeur");
+        updatePublisherComboBox();
 
         searchFieldsLayout.add(titleField, numberOfPiecesField, recommendedAgeField, categoryComboBox, publisherComboBox);
     }
@@ -152,11 +201,11 @@ public class CatalogueView extends VerticalLayout {
     private void createGeneralSearchFields() {
         searchCriteria.clear();
 
-        TextField keywordField = new TextField("Mot-clé");
-        ComboBox<Category> categoryComboBox = new ComboBox<>("Catégorie");
-        categoryComboBox.setItems(itemService.getAllCategories());
-        ComboBox<Publisher> publisherComboBox = new ComboBox<>("Éditeur");
-        publisherComboBox.setItems(itemService.getAllPublishers());
+        this.keywordField = new TextField("Mot-clé");
+        this.categoryComboBox = new ComboBox<>("Catégorie");
+        updateCategoryComboBox();
+        this.publisherComboBox = new ComboBox<>("Éditeur");
+        updatePublisherComboBox();
 
         searchFieldsLayout.add(keywordField, categoryComboBox, publisherComboBox);
     }
@@ -166,12 +215,12 @@ public class CatalogueView extends VerticalLayout {
         searchCriteria.clear();
 
         if ("Livre".equals(selectedType)) {
-            TextField titleField = (TextField) searchFieldsLayout.getComponentAt(0);
-            TextField authorField = (TextField) searchFieldsLayout.getComponentAt(1);
-            TextField isbnField = (TextField) searchFieldsLayout.getComponentAt(2);
-            DatePicker publicationDateField = (DatePicker) searchFieldsLayout.getComponentAt(3);
-            ComboBox<Category> categoryComboBox = (ComboBox<Category>) searchFieldsLayout.getComponentAt(4);
-            ComboBox<Publisher> publisherComboBox = (ComboBox<Publisher>) searchFieldsLayout.getComponentAt(5);
+            TextField titleField = this.titleField;
+            TextField authorField = this.authorField;
+            TextField isbnField = this.isbnField;
+            DatePicker publicationDateField = this.publicationDateField;
+            ComboBox<Category> categoryComboBox = this.categoryComboBox;
+            ComboBox<Publisher> publisherComboBox = this.publisherComboBox;
 
             searchCriteria.put("title", titleField.getValue());
             searchCriteria.put("author", authorField.getValue());
@@ -181,12 +230,12 @@ public class CatalogueView extends VerticalLayout {
             searchCriteria.put("publisher", publisherComboBox.getValue());
 
         } else if ("Revue".equals(selectedType)) {
-            TextField titleField = (TextField) searchFieldsLayout.getComponentAt(0);
-            TextField isniField = (TextField) searchFieldsLayout.getComponentAt(1);
-            ComboBox<String> monthComboBox = (ComboBox<String>) searchFieldsLayout.getComponentAt(2);
-            DatePicker publicationDateField = (DatePicker) searchFieldsLayout.getComponentAt(3);
-            ComboBox<Category> categoryComboBox = (ComboBox<Category>) searchFieldsLayout.getComponentAt(4);
-            ComboBox<Publisher> publisherComboBox = (ComboBox<Publisher>) searchFieldsLayout.getComponentAt(5);
+            TextField titleField = this.titleField;
+            TextField isniField = this.isniField;
+            ComboBox<String> monthComboBox = this.monthComboBox;
+            DatePicker publicationDateField = this.publicationDateField;
+            ComboBox<Category> categoryComboBox = this.categoryComboBox;
+            ComboBox<Publisher> publisherComboBox = this.publisherComboBox;
 
             searchCriteria.put("title", titleField.getValue());
             searchCriteria.put("isni", isniField.getValue());
@@ -196,11 +245,11 @@ public class CatalogueView extends VerticalLayout {
             searchCriteria.put("publisher", publisherComboBox.getValue());
 
         } else if ("Jeu".equals(selectedType)) {
-            TextField titleField = (TextField) searchFieldsLayout.getComponentAt(0);
-            IntegerField numberOfPiecesField = (IntegerField) searchFieldsLayout.getComponentAt(1);
-            IntegerField recommendedAgeField = (IntegerField) searchFieldsLayout.getComponentAt(2);
-            ComboBox<Category> categoryComboBox = (ComboBox<Category>) searchFieldsLayout.getComponentAt(3);
-            ComboBox<Publisher> publisherComboBox = (ComboBox<Publisher>) searchFieldsLayout.getComponentAt(4);
+            TextField titleField = this.titleField;
+            IntegerField numberOfPiecesField = this.numberOfPiecesField;
+            IntegerField recommendedAgeField = this.recommendedAgeField;
+            ComboBox<Category> categoryComboBox = this.categoryComboBox;
+            ComboBox<Publisher> publisherComboBox = this.publisherComboBox;
 
             searchCriteria.put("title", titleField.getValue());
             searchCriteria.put("numberOfPieces", numberOfPiecesField.getValue());
@@ -209,16 +258,33 @@ public class CatalogueView extends VerticalLayout {
             searchCriteria.put("publisher", publisherComboBox.getValue());
 
         } else {
-            TextField keywordField = (TextField) searchFieldsLayout.getComponentAt(0);
-            ComboBox<Category> categoryComboBox = (ComboBox<Category>) searchFieldsLayout.getComponentAt(1);
-            ComboBox<Publisher> publisherComboBox = (ComboBox<Publisher>) searchFieldsLayout.getComponentAt(2);
+            TextField keywordField = this.keywordField;
+            ComboBox<Category> categoryComboBox = this.categoryComboBox;
+            ComboBox<Publisher> publisherComboBox = this.publisherComboBox;
 
             searchCriteria.put("keyword", keywordField.getValue());
             searchCriteria.put("category", categoryComboBox.getValue());
             searchCriteria.put("publisher", publisherComboBox.getValue());
         }
 
-        dataProvider.refreshAll();
+        resultsGrid.setItems(query -> {
+            int offset = query.getOffset();
+            int limit = query.getLimit();
+            return itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit).stream();
+        });
+    }
+
+    private String translateType(String type) {
+        switch (type) {
+            case "book":
+                return "Livre";
+            case "magazine":
+                return "Revue";
+            case "board_game":
+                return "Jeu";
+            default:
+                return type;
+        }
     }
 
     private void configureGrid() {
@@ -227,13 +293,13 @@ public class CatalogueView extends VerticalLayout {
 
         resultsGrid.removeAllColumns();
 
-        resultsGrid.addColumn(Item::getTitle).setHeader("Titre").setSortable(true);
-        resultsGrid.addColumn(Item::getType).setHeader("Type").setSortable(true);
+        resultsGrid.addColumn(Item::getTitle).setHeader("Titre").setSortable(true).setSortProperty("title");
+        resultsGrid.addColumn(item -> translateType(item.getType())).setHeader("Type").setSortable(true);
         resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie");
         resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur");
 
         // Colonnes spécifiques en fonction du type
-        resultsGrid.addColumn(item -> {
+        /*resultsGrid.addColumn(item -> {
             if ("Livre".equals(item.getType())) {
                 Book book = itemService.findBookByItemId(item.getId());
                 return book != null ? book.getAuthor() : "";
@@ -246,7 +312,7 @@ public class CatalogueView extends VerticalLayout {
             } else {
                 return "";
             }
-        }).setHeader("Détails");
+        }).setHeader("Détails");*/
 
         resultsGrid.getColumns().forEach(col -> col.setAutoWidth(true));
 
@@ -255,26 +321,20 @@ public class CatalogueView extends VerticalLayout {
             Item selectedItem = event.getValue();
             if (selectedItem != null) {
                 resultsGrid.getUI().ifPresent(ui ->
-                        ui.navigate(ItemDetailView.class, selectedItem.getId().toString())
+                        ui.navigate(ItemDetailView.class, selectedItem.getId())
                 );
             }
         });
 
         // Configuration du DataProvider
-        dataProvider = DataProvider.fromCallbacks(
-                // Fetch items
-                query -> {
-                    int offset = query.getOffset();
-                    int limit = query.getLimit();
+        resultsGrid.setPageSize(20);
+        resultsGrid.setItems(query -> {
+            int offset = query.getOffset();
+            int limit = query.getLimit();
+            return itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit).stream();
+        });
 
-                    // Récupérer les items avec pagination
-                    return itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit).stream();
-                },
-                // Count items
-                query -> itemService.countItemsWithFilters(searchCriteria, selectedType)
-        );
-
-        resultsGrid.setDataProvider(dataProvider);
+        //resultsGrid.setDataProvider(dataProvider);
 
         add(resultsGrid);
     }

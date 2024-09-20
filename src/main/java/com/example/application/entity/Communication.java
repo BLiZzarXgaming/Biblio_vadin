@@ -35,4 +35,17 @@ public class Communication {
     @ManyToOne
     @JoinColumn(name = "member_id", nullable = false)
     private User member;
+
+    public Communication() {
+    }
+
+    public Communication(Long id, String messageType, String content, Date sendDate, Date createdAt, Date updatedAt, User member) {
+        this.id = id;
+        this.messageType = messageType;
+        this.content = content;
+        this.sendDate = sendDate;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.member = member;
+    }
 }

@@ -270,6 +270,35 @@ public class User {
         this.communications = communications;
     }
 
+    public User() {
+    }
+
+    public User(Long id, String firstName, String lastName, String username, String email, Date emailVerifiedAt, String status, String password, String phoneNumber, String cellNumber, boolean isChild, Date dateOfBirth, String rememberToken, Date createdAt, Date updatedAt, Role role, Set<Availability> availabilities, Set<Loan> loans, Set<Reservation> reservations, Set<SpecialLimit> specialLimits, Set<UserRelationship> childRelationships, Set<UserRelationship> parentRelationships, Set<Communication> communications) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.username = username;
+        this.email = email;
+        this.emailVerifiedAt = emailVerifiedAt;
+        this.status = status;
+        this.password = password;
+        this.phoneNumber = phoneNumber;
+        this.cellNumber = cellNumber;
+        this.isChild = isChild;
+        this.dateOfBirth = dateOfBirth;
+        this.rememberToken = rememberToken;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.role = role;
+        this.availabilities = availabilities;
+        this.loans = loans;
+        this.reservations = reservations;
+        this.specialLimits = specialLimits;
+        this.childRelationships = childRelationships;
+        this.parentRelationships = parentRelationships;
+        this.communications = communications;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

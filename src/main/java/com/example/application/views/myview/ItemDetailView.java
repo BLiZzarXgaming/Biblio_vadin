@@ -17,10 +17,10 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 
-@Route(value = "item/:itemID", layout = MainLayout.class)
-@PageTitle("Détails de l'Item")
+@Route(value = "item", layout = MainLayout.class)
+@PageTitle("Détails")
 @AnonymousAllowed
-public class ItemDetailView extends VerticalLayout implements HasUrlParameter<String> {
+public class ItemDetailView extends VerticalLayout implements HasUrlParameter<Long> {
 
     private ItemServiceImpl itemService;
     private Item item;
@@ -30,9 +30,9 @@ public class ItemDetailView extends VerticalLayout implements HasUrlParameter<St
     }
 
     @Override
-    public void setParameter(BeforeEvent event, String parameter) {
+    public void setParameter(BeforeEvent event, Long parameter) {
         try {
-            Long itemId = Long.parseLong(parameter);
+            Long itemId = parameter;
             item = itemService.findItemById(itemId);
 
             if (item != null) {

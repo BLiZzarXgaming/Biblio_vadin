@@ -84,4 +84,16 @@ public class Role {
     public void setPermissions(Set<Permission> permissions) {
         this.permissions = permissions;
     }
+
+    public Role() {
+    }
+
+    public Role(Long id, String name, Date createdAt, Date updatedAt, Set<User> users, Set<Permission> permissions) {
+        this.id = id;
+        this.name = name;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.users = users;
+        this.permissions = permissions;
+    }
 }

@@ -90,4 +90,17 @@ public class Book {
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public Book() {
+    }
+
+    public Book(Long itemId, Item item, String isbn, String author, Date publicationDate, Date createdAt, Date updatedAt) {
+        this.itemId = itemId;
+        this.item = item;
+        this.isbn = isbn;
+        this.author = author;
+        this.publicationDate = publicationDate;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 }

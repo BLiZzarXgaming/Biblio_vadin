@@ -137,4 +137,21 @@ public class Availability {
     public void setUser(User user) {
         this.user = user;
     }
+
+    public Availability(Long id, String title, LocalDate date, LocalTime time, int duration, String details, String type, String status, Date createdAt, Date updatedAt, User user) {
+        this.id = id;
+        this.title = title;
+        this.date = date;
+        this.time = time;
+        this.duration = duration;
+        this.details = details;
+        this.type = type;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.user = user;
+    }
+
+    public Availability() {
+    }
 }

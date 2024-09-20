@@ -78,4 +78,16 @@ public class Supplier {
     public void setItems(Set<Item> items) {
         this.items = items;
     }
+
+    public Supplier() {
+    }
+
+    public Supplier(Long id, String name, String contactInfo, Date createdAt, Date updatedAt, Set<Item> items) {
+        this.id = id;
+        this.name = name;
+        this.contactInfo = contactInfo;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.items = items;
+    }
 }

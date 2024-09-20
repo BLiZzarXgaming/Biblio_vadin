@@ -77,4 +77,16 @@ public class Category {
     public void setItems(Set<Item> items) {
         this.items = items;
     }
+
+    public Category() {
+    }
+
+    public Category(Long id, String name, String description, Date createdAt, Date updatedAt, Set<Item> items) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.items = items;
+    }
 }

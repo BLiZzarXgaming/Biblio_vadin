@@ -22,19 +22,20 @@ import java.util.stream.Collectors;
 @Service
 public class ItemServiceImpl {
 
-    private BookRepository bookRepository;
+    @Autowired
+    private final BookRepository bookRepository;
 
-    private MagazineRepository magazineRepository;
+    private final MagazineRepository magazineRepository;
 
-    private BoardGameRepository boardGameRepository;
+    private final BoardGameRepository boardGameRepository;
 
-    private ItemRepository itemRepository;
+    private final ItemRepository itemRepository;
 
-    private CategoryRepository categoryRepository;
+    private final CategoryRepository categoryRepository;
 
-    private PublisherRepository publisherRepository;
+    private final PublisherRepository publisherRepository;
 
-    private CopyRepository copyRepository;
+    private final CopyRepository copyRepository;
 
     public ItemServiceImpl(BookRepository bookRepository, MagazineRepository magazineRepository, BoardGameRepository boardGameRepository, ItemRepository itemRepository, CategoryRepository categoryRepository, PublisherRepository publisherRepository, CopyRepository copyRepository) {
         this.bookRepository = bookRepository;
@@ -88,8 +89,8 @@ public class ItemServiceImpl {
         } else {
             return itemRepository.findByCriteriaWithPagination(
                     (String) searchCriteria.get("keyword"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher"),
+                    searchCriteria.get("category") != null ? ((Category) searchCriteria.get("category")).getId() : null,
+                    searchCriteria.get("publisher") != null ? ((Publisher) searchCriteria.get("publisher")).getId() : null,
                     pageable
             );
         }
@@ -125,8 +126,8 @@ public class ItemServiceImpl {
         } else {
             return itemRepository.countByCriteria(
                     (String) searchCriteria.get("keyword"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher")
+                    (Category) searchCriteria.get("category"),
+                    (Publisher) searchCriteria.get("publisher")
             );
         }
     }

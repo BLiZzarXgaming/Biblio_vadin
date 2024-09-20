@@ -115,4 +115,19 @@ public class Copy {
     public void setReservations(Set<Reservation> reservations) {
         this.reservations = reservations;
     }
+
+    public Copy() {
+    }
+
+    public Copy(Long id, String status, Date acquisitionDate, double price, Date createdAt, Date updatedAt, Item item, Set<Loan> loans, Set<Reservation> reservations) {
+        this.id = id;
+        this.status = status;
+        this.acquisitionDate = acquisitionDate;
+        this.price = price;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.item = item;
+        this.loans = loans;
+        this.reservations = reservations;
+    }
 }
