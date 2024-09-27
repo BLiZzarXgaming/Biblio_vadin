@@ -7,6 +7,7 @@ import com.example.application.entity.Book;
 import com.example.application.entity.Magazine;
 import com.example.application.entity.BoardGame;
 
+import com.example.application.objectcustom.MoisOption;
 import com.example.application.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -55,79 +56,44 @@ public class ItemServiceImpl {
         return publisherRepository.findAll();
     }
 
+
     public List<Item> fetchItemsWithFilters(Map<String, Object> searchCriteria, String selectedType, int offset, int limit) {
-        Pageable pageable = PageRequest.of(offset / limit, limit);
-        if ("Livre".equals(selectedType)) {
-            return bookRepository.findByCriteriaWithPagination(
+        Pageable pageable = PageRequest.of(offset / limit, limit); // Pageable object for pagination
+        if ("Livre".equals(selectedType)) { // Book
+            return itemRepository.findBookByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (String) searchCriteria.get("author"),
                     (String) searchCriteria.get("isbn"),
                     (LocalDate) searchCriteria.get("publicationDate"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher"),
+                    searchCriteria.get("category") != null ? ((Category) searchCriteria.get("category")).getId() : null,
+                    searchCriteria.get("publisher") != null ? ((Publisher) searchCriteria.get("publisher")).getId() : null,
                     pageable
-            ).stream().map(Book::getItem).collect(Collectors.toList());
-        } else if ("Revue".equals(selectedType)) {
-            return magazineRepository.findByCriteriaWithPagination(
+            );
+        } else if ("Revue".equals(selectedType)) { // Magazine
+            return itemRepository.findMagazineByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (String) searchCriteria.get("isni"),
                     (String) searchCriteria.get("month"),
                     (LocalDate) searchCriteria.get("publicationDate"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher"),
+                    searchCriteria.get("category") != null ? ((Category) searchCriteria.get("category")).getId() : null,
+                    searchCriteria.get("publisher") != null ? ((Publisher) searchCriteria.get("publisher")).getId() : null,
                     pageable
-            ).stream().map(Magazine::getItem).collect(Collectors.toList());
-        } else if ("Jeu".equals(selectedType)) {
-            return boardGameRepository.findByCriteriaWithPagination(
+            );
+        } else if ("Jeu".equals(selectedType)) { // BoardGame
+            return itemRepository.findBoardGameByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (Integer) searchCriteria.get("numberOfPieces"),
                     (Integer) searchCriteria.get("recommendedAge"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher"),
+                    searchCriteria.get("category") != null ? ((Category) searchCriteria.get("category")).getId() : null,
+                    searchCriteria.get("publisher") != null ? ((Publisher) searchCriteria.get("publisher")).getId() : null,
                     pageable
-            ).stream().map(BoardGame::getItem).collect(Collectors.toList());
-        } else {
+            );
+        } else { // All items
             return itemRepository.findByCriteriaWithPagination(
                     (String) searchCriteria.get("keyword"),
                     searchCriteria.get("category") != null ? ((Category) searchCriteria.get("category")).getId() : null,
                     searchCriteria.get("publisher") != null ? ((Publisher) searchCriteria.get("publisher")).getId() : null,
                     pageable
-            );
-        }
-    }
-
-    public int countItemsWithFilters(Map<String, Object> searchCriteria, String selectedType) {
-        if ("Livre".equals(selectedType)) {
-            return bookRepository.countByCriteria(
-                    (String) searchCriteria.get("title"),
-                    (String) searchCriteria.get("author"),
-                    (String) searchCriteria.get("isbn"),
-                    (LocalDate) searchCriteria.get("publicationDate"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher")
-            );
-        } else if ("Revue".equals(selectedType)) {
-            return magazineRepository.countByCriteria(
-                    (String) searchCriteria.get("title"),
-                    (String) searchCriteria.get("isni"),
-                    (String) searchCriteria.get("month"),
-                    (LocalDate) searchCriteria.get("publicationDate"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher")
-            );
-        } else if ("Jeu".equals(selectedType)) {
-            return boardGameRepository.countByCriteria(
-                    (String) searchCriteria.get("title"),
-                    (Integer) searchCriteria.get("numberOfPieces"),
-                    (Integer) searchCriteria.get("recommendedAge"),
-                    (Long) searchCriteria.get("category"),
-                    (Long) searchCriteria.get("publisher")
-            );
-        } else {
-            return itemRepository.countByCriteria(
-                    (String) searchCriteria.get("keyword"),
-                    (Category) searchCriteria.get("category"),
-                    (Publisher) searchCriteria.get("publisher")
             );
         }
     }

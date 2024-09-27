@@ -30,6 +30,9 @@ public class Item {
     @Column(name = "updated_at")
     private Date updatedAt;
 
+    @Column(name = "link")
+    private String link;
+
     // Relations avec Copy
     @OneToMany(mappedBy = "item")
     private Set<Copy> copies;
@@ -163,11 +166,19 @@ public class Item {
         this.boardGame = boardGame;
     }
 
+    public String getLink() {
+        return link;
+    }
+
+    public void setLink(String link) {
+        this.link = link;
+    }
+
 
     public Item() {
     }
 
-    public Item(Long id, String type, String title, double value, Date createdAt, Date updatedAt, Set<Copy> copies, Category category, Publisher publisher, Supplier supplier, Book book, Magazine magazine, BoardGame boardGame) {
+    public Item(Long id, String type, String title, double value, Date createdAt, Date updatedAt, Set<Copy> copies, Category category, Publisher publisher, Supplier supplier, Book book, Magazine magazine, BoardGame boardGame, String link) {
         this.id = id;
         this.type = type;
         this.title = title;
@@ -181,5 +192,6 @@ public class Item {
         this.book = book;
         this.magazine = magazine;
         this.boardGame = boardGame;
+        this.link = link;
     }
 }

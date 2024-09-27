@@ -1,19 +1,25 @@
 package com.example.application.views.myview;
 
 import com.example.application.entity.*;
+import com.example.application.objectcustom.MoisOption;
 import com.example.application.service.implementation.ItemServiceImpl;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Composite;
+import com.vaadin.flow.component.ItemLabelGenerator;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.provider.CallbackDataProvider;
 import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
@@ -26,7 +32,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.Month;
 import java.time.format.TextStyle;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @PageTitle("Catalogue")
 @Route(value = "/catalogue", layout = MainLayout.class)
@@ -60,7 +68,7 @@ public class CatalogueView extends VerticalLayout {
     private TextField keywordField;
 
     private TextField isniField ;
-    private ComboBox<String> monthComboBox ;
+    private ComboBox<MoisOption> monthComboBox ;
 
     private IntegerField numberOfPiecesField ;
     private IntegerField recommendedAgeField ;
@@ -169,9 +177,14 @@ public class CatalogueView extends VerticalLayout {
         this.isniField = new TextField("ISNI");
         this.monthComboBox = new ComboBox<>("Mois de Publication");
 
-        monthComboBox.setItems(Arrays.stream(Month.values())
-                .map(month -> month.getDisplayName(TextStyle.FULL, Locale.FRENCH))
-                .collect(Collectors.toList())); //TODO voir solutions
+        List<MoisOption> listeDesMois = IntStream.rangeClosed(1, 12)
+                .mapToObj(i -> new MoisOption(
+                        String.format("%02d", i),
+                        Month.of(i).getDisplayName(TextStyle.FULL, Locale.FRENCH)))
+                .collect(Collectors.toList());
+
+        this.monthComboBox.setItems(listeDesMois);
+        this.monthComboBox.setItemLabelGenerator(MoisOption::getNom);
 
         this.publicationDateField = new DatePicker("Date de Publication");
         this.categoryComboBox = new ComboBox<>("Catégorie");
@@ -232,14 +245,21 @@ public class CatalogueView extends VerticalLayout {
         } else if ("Revue".equals(selectedType)) {
             TextField titleField = this.titleField;
             TextField isniField = this.isniField;
-            ComboBox<String> monthComboBox = this.monthComboBox;
+            ComboBox<MoisOption> monthComboBox = this.monthComboBox;
             DatePicker publicationDateField = this.publicationDateField;
             ComboBox<Category> categoryComboBox = this.categoryComboBox;
             ComboBox<Publisher> publisherComboBox = this.publisherComboBox;
 
             searchCriteria.put("title", titleField.getValue());
             searchCriteria.put("isni", isniField.getValue());
-            searchCriteria.put("month", monthComboBox.getValue());
+
+            if (monthComboBox.getValue() != null)
+            {
+                searchCriteria.put("month", monthComboBox.getValue().getNumero());
+            } else {
+                searchCriteria.put("month", "");
+            }
+
             searchCriteria.put("publicationDate", publicationDateField.getValue());
             searchCriteria.put("category", categoryComboBox.getValue());
             searchCriteria.put("publisher", publisherComboBox.getValue());
@@ -266,12 +286,14 @@ public class CatalogueView extends VerticalLayout {
             searchCriteria.put("category", categoryComboBox.getValue());
             searchCriteria.put("publisher", publisherComboBox.getValue());
         }
-
+        resultsGrid.scrollToStart();
         resultsGrid.setItems(query -> {
             int offset = query.getOffset();
             int limit = query.getLimit();
             return itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit).stream();
         });
+
+
     }
 
     private String translateType(String type) {
@@ -290,29 +312,18 @@ public class CatalogueView extends VerticalLayout {
     private void configureGrid() {
         resultsGrid = new Grid<>(Item.class);
         resultsGrid.setSizeFull();
+        resultsGrid.addClassName("my-grid-lp");
+
 
         resultsGrid.removeAllColumns();
+        resultsGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
+        resultsGrid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
 
-        resultsGrid.addColumn(Item::getTitle).setHeader("Titre").setSortable(true).setSortProperty("title");
-        resultsGrid.addColumn(item -> translateType(item.getType())).setHeader("Type").setSortable(true);
-        resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie");
-        resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur");
 
-        // Colonnes spécifiques en fonction du type
-        /*resultsGrid.addColumn(item -> {
-            if ("Livre".equals(item.getType())) {
-                Book book = itemService.findBookByItemId(item.getId());
-                return book != null ? book.getAuthor() : "";
-            } else if ("Revue".equals(item.getType())) {
-                Magazine magazine = itemService.findMagazineByItemId(item.getId());
-                return magazine != null ? magazine.getIsni() : "";
-            } else if ("Jeu".equals(item.getType())) {
-                BoardGame game = itemService.findBoardGameByItemId(item.getId());
-                return game != null ? game.getRecommendedAge() : "";
-            } else {
-                return "";
-            }
-        }).setHeader("Détails");*/
+        resultsGrid.addColumn(Item::getTitle).setHeader("Titre").setResizable(true);
+        resultsGrid.addColumn(item -> translateType(item.getType())).setHeader("Type").setResizable(true);
+        resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setResizable(true);
+        resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur").setResizable(true);
 
         resultsGrid.getColumns().forEach(col -> col.setAutoWidth(true));
 
@@ -320,22 +331,76 @@ public class CatalogueView extends VerticalLayout {
         resultsGrid.asSingleSelect().addValueChangeListener(event -> {
             Item selectedItem = event.getValue();
             if (selectedItem != null) {
-                resultsGrid.getUI().ifPresent(ui ->
-                        ui.navigate(ItemDetailView.class, selectedItem.getId())
-                );
+                showItemDetailsDialog(selectedItem);
             }
         });
 
         // Configuration du DataProvider
         resultsGrid.setPageSize(20);
+        resultsGrid.scrollToStart();
         resultsGrid.setItems(query -> {
             int offset = query.getOffset();
             int limit = query.getLimit();
             return itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit).stream();
         });
 
-        //resultsGrid.setDataProvider(dataProvider);
-
         add(resultsGrid);
+    }
+
+    private void showItemDetailsDialog(Item selectedItem) {
+        Dialog dialog = new Dialog();
+        dialog.setWidth("600px");
+        dialog.setHeight("auto");
+
+        VerticalLayout dialogLayout = new VerticalLayout();
+        dialogLayout.setPadding(true);
+        dialogLayout.setSpacing(false);
+        if (selectedItem.getLink() != null) {
+            Anchor titleLink = new Anchor(selectedItem.getLink(), selectedItem.getTitle(), AnchorTarget.BLANK);
+            H3 title = new H3(titleLink);
+            dialogLayout.add(title);
+        } else {
+            H3 title = new H3(selectedItem.getTitle());
+            dialogLayout.add(title);
+        }
+
+
+
+
+        // Informations de base
+        dialogLayout.add(new Paragraph("Catégorie : " + selectedItem.getCategory().getName()));
+        dialogLayout.add(new Paragraph("Éditeur : " + selectedItem.getPublisher().getName()));
+
+        // Informations spécifiques en fonction du type
+        String itemType = selectedItem.getType();
+
+        if ("book".equals(itemType)) {
+            Book book = itemService.findBookByItemId(selectedItem.getId());
+            if (book != null) {
+                dialogLayout.add(new Paragraph("Auteur : " + book.getAuthor()));
+                dialogLayout.add(new Paragraph("ISBN : " + book.getIsbn()));
+                dialogLayout.add(new Paragraph("Date de publication : " + book.getPublicationDate()));
+            }
+        } else if ("magazine".equals(itemType)) {
+            Magazine magazine = itemService.findMagazineByItemId(selectedItem.getId());
+            if (magazine != null) {
+                dialogLayout.add(new Paragraph("ISNI : " + magazine.getIsni()));
+                dialogLayout.add(new Paragraph("Date de publication : " + magazine.getPublicationDate()));
+            }
+        } else if ("board_game".equals(itemType)) {
+            BoardGame boardGame = itemService.findBoardGameByItemId(selectedItem.getId());
+            if (boardGame != null) {
+                dialogLayout.add(new Paragraph("Nombre de pièces : " + boardGame.getNumberOfPieces()));
+                dialogLayout.add(new Paragraph("Âge recommandé : " + boardGame.getRecommendedAge()));
+                dialogLayout.add(new Paragraph("Règles du jeu : " + boardGame.getGameRules()));
+            }
+        }
+
+        // Bouton pour fermer la fenêtre
+        Button closeButton = new Button("Fermer", event -> dialog.close());
+        dialogLayout.add(closeButton);
+
+        dialog.add(dialogLayout);
+        dialog.open();
     }
 }
