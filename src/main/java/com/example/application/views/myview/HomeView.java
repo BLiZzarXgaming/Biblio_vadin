@@ -16,14 +16,15 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.dom.Style;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.RouteAlias;
+import com.vaadin.flow.router.*;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import elemental.json.Json;
 import elemental.json.JsonObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.vaadin.stefan.fullcalendar.Entry;
 import org.vaadin.stefan.fullcalendar.FullCalendar;
 import org.vaadin.stefan.fullcalendar.FullCalendarBuilder;
@@ -31,6 +32,7 @@ import org.vaadin.stefan.fullcalendar.Timezone;
 
 import java.time.*;
 import java.time.format.TextStyle;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -38,7 +40,7 @@ import java.util.Locale;
 @Route(value = "/", layout = MainLayout.class)
 @RouteAlias(value = "", layout = MainLayout.class)
 @AnonymousAllowed
-public class HomeView extends Composite<VerticalLayout> {
+public class HomeView extends Composite<VerticalLayout> implements BeforeEnterObserver {
 
     // TODO : voir comment récupérer les disponibilités depuis la base de données
 
@@ -197,6 +199,21 @@ public class HomeView extends Composite<VerticalLayout> {
             popup = new Popup();
             popup.setFocusTrap(true);
            getContent().add(popup);
+        }
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent beforeEnterEvent) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth != null) {
+
+            Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
+            if (authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRATEUR"))) {
+                UI.getCurrent().getPage().setLocation("/admin/home");
+            } else if (authorities.stream().anyMatch(a -> a.getAuthority().equals("ROLE_BÉNÉVOLE"))) {
+                UI.getCurrent().getPage().setLocation("/volunteer/home");
+            }
         }
     }
 }

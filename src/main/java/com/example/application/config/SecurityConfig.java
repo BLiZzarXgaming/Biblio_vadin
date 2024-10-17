@@ -28,6 +28,12 @@ public class SecurityConfig extends VaadinWebSecurity {
         http.authorizeHttpRequests(auth -> auth.requestMatchers(new AntPathRequestMatcher("/public/**"))
                 .anonymous());
 
+        http.authorizeHttpRequests(auth -> {
+            auth.requestMatchers(new AntPathRequestMatcher("/admin/**")).hasRole("ADMINISTRATEUR");
+            auth.requestMatchers(new AntPathRequestMatcher("/volunteer/**")).hasRole("BÉNÉVOLE");
+
+        } );
+
         super.configure(http);
 
         setLoginView(http, LoginView.class, "/"); // Remplacez par votre classe de vue de connexion

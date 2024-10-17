@@ -3,6 +3,9 @@ package com.example.application.views;
 import com.example.application.config.SecurityService;
 import com.example.application.identification_user.MyUserPrincipal;
 import com.example.application.views.myview.*;
+import com.example.application.views.myview.admin.AdminHomeView;
+import com.example.application.views.myview.benevole.BenevoleHomeView;
+import com.example.application.views.myview.membre.testm1;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
@@ -20,7 +23,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import javax.swing.*;
 import java.util.Collection;
 
 /**
@@ -61,14 +63,56 @@ public class MainLayout extends AppLayout {
     }
 
     private SideNav createNavigation() {
+
         SideNav nav = new SideNav();
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+
+        if (securityService.getAuthenticatedUser() == null) {
+            return createNavigationAnonyme(nav);
+        } else {
+            for (GrantedAuthority authority : authorities) {
+                if (authority.getAuthority().equals("ROLE_ADMINISTRATEUR")) {
+                    return createNavigationAdmin(nav);
+                } else if (authority.getAuthority().equals("ROLE_MEMBRE")) {
+                    return createNavigationMembre(nav);
+                } else if (authority.getAuthority().equals("ROLE_BÉNÉVOLE")) {
+                    return createNavigationBenevole(nav);
+                }
+            }
+        }
+
+        return nav;
+    }
+
+    private SideNav createNavigationAnonyme(SideNav nav) {
+
 
         nav.addItem(new SideNavItem("Accueil", HomeView.class));
         nav.addItem(new SideNavItem("Catalogue", CatalogueView.class));
-        nav.addItem(new SideNavItem("Testa1", testa1.class));
-        nav.addItem(new SideNavItem("Testb1", testb1.class));
-        nav.addItem(new SideNavItem("Testm1", testm1.class));
 
+        return nav;
+    }
+
+    private SideNav createNavigationMembre(SideNav nav) {
+
+        nav.addItem(new SideNavItem("Accueil", HomeView.class));
+        nav.addItem(new SideNavItem("Catalogue", CatalogueView.class));
+
+        return nav;
+    }
+
+    private SideNav createNavigationBenevole(SideNav nav) {
+
+        nav.addItem(new SideNavItem("Accueil", BenevoleHomeView.class));
+
+        return nav;
+    }
+
+    private SideNav createNavigationAdmin(SideNav nav) {
+
+        nav.addItem(new SideNavItem("Accueil", AdminHomeView.class));
 
         return nav;
     }

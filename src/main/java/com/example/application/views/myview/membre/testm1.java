@@ -1,4 +1,4 @@
-package com.example.application.views.myview;
+package com.example.application.views.myview.membre;
 
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Composite;
