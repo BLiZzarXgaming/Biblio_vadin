@@ -64,6 +64,7 @@ public class CatalogueView extends VerticalLayout {
     private DatePicker publicationDateField ;
     private ComboBox<Category> categoryComboBox ;
     private ComboBox<Publisher> publisherComboBox ;
+    private TextField gtinField ;
 
     private TextField keywordField;
 
@@ -203,12 +204,13 @@ public class CatalogueView extends VerticalLayout {
         this.titleField = new TextField("Titre");
         this.numberOfPiecesField = new IntegerField("Nombre de Pièces");
         this.recommendedAgeField = new IntegerField("Âge Recommandé");
+        this.gtinField = new TextField("GTIN");
         this.categoryComboBox = new ComboBox<>("Catégorie");
         updateCategoryComboBox();
         this.publisherComboBox = new ComboBox<>("Éditeur");
         updatePublisherComboBox();
 
-        searchFieldsLayout.add(titleField, numberOfPiecesField, recommendedAgeField, categoryComboBox, publisherComboBox);
+        searchFieldsLayout.add(titleField, numberOfPiecesField, recommendedAgeField, gtinField, categoryComboBox, publisherComboBox);
     }
 
     private void createGeneralSearchFields() {
@@ -270,12 +272,14 @@ public class CatalogueView extends VerticalLayout {
             IntegerField recommendedAgeField = this.recommendedAgeField;
             ComboBox<Category> categoryComboBox = this.categoryComboBox;
             ComboBox<Publisher> publisherComboBox = this.publisherComboBox;
+            TextField gtinField = this.gtinField;
 
             searchCriteria.put("title", titleField.getValue());
             searchCriteria.put("numberOfPieces", numberOfPiecesField.getValue());
             searchCriteria.put("recommendedAge", recommendedAgeField.getValue());
             searchCriteria.put("category", categoryComboBox.getValue());
             searchCriteria.put("publisher", publisherComboBox.getValue());
+            searchCriteria.put("gtin", gtinField.getValue());
 
         } else {
             TextField keywordField = this.keywordField;
@@ -393,6 +397,7 @@ public class CatalogueView extends VerticalLayout {
                 dialogLayout.add(new Paragraph("Nombre de pièces : " + boardGame.getNumberOfPieces()));
                 dialogLayout.add(new Paragraph("Âge recommandé : " + boardGame.getRecommendedAge()));
                 dialogLayout.add(new Paragraph("Règles du jeu : " + boardGame.getGameRules()));
+                dialogLayout.add(new Paragraph("GTIN : " + boardGame.getGtin()));
             }
         }
 

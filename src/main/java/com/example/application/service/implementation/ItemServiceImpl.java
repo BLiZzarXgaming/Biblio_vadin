@@ -86,6 +86,7 @@ public class ItemServiceImpl {
                     (Integer) searchCriteria.get("recommendedAge"),
                     searchCriteria.get("category") != null ? ((Category) searchCriteria.get("category")).getId() : null,
                     searchCriteria.get("publisher") != null ? ((Publisher) searchCriteria.get("publisher")).getId() : null,
+                    searchCriteria.get("gtin") != null ? (String) searchCriteria.get("gtin") : null,
                     pageable
             );
         } else { // All items

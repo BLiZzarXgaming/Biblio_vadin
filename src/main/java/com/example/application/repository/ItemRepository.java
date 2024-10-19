@@ -32,12 +32,14 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             "    (:recommendedAge IS NULL OR g.recommended_age = :recommendedAge) AND " +
             "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
             "    (:category IS NULL OR i.category = :category) AND " +
-            "    (:publisher IS NULL OR i.publisher_id = :publisher) ", nativeQuery = true)
+            "    (:publisher IS NULL OR i.publisher_id = :publisher) AND" +
+            "    (:gtin IS NULL OR g.gtin = :gtin OR :gtin = '') ", nativeQuery = true)
     List<Item> findBoardGameByCriteriaWithPagination(@Param("title") String title,
                                                      @Param("numberOfPieces") Integer numberOfPieces,
                                                      @Param("recommendedAge") Integer recommendedAge,
                                                      @Param("category") Long category,
                                                      @Param("publisher") Long publisher,
+                                                     @Param("gtin") String gtin,
                                                      Pageable pageable);
 
     @Query(value = "SELECT i.* FROM items i " +

@@ -34,6 +34,9 @@ public class BoardGame {
     @Column(name = "updated_at")
     private Date updatedAt;
 
+    @Column(name = "gtin", nullable = false)
+    private String gtin;
+
     public Long getItemId() {
         return itemId;
     }
@@ -90,10 +93,18 @@ public class BoardGame {
         this.updatedAt = updatedAt;
     }
 
+    public String getGtin() {
+        return gtin;
+    }
+
+    public void setGtin(String gtin) {
+        this.gtin = gtin;
+    }
+
     public BoardGame() {
     }
 
-    public BoardGame(Long itemId, Item item, int numberOfPieces, int recommendedAge, String gameRules, Date createdAt, Date updatedAt) {
+    public BoardGame(Long itemId, Item item, int numberOfPieces, int recommendedAge, String gameRules, Date createdAt, Date updatedAt, String gtin) {
         this.itemId = itemId;
         this.item = item;
         this.numberOfPieces = numberOfPieces;
@@ -101,5 +112,6 @@ public class BoardGame {
         this.gameRules = gameRules;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.gtin = gtin;
     }
 }
