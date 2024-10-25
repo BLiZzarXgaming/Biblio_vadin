@@ -28,4 +28,7 @@ public interface BoardGameRepository extends JpaRepository<BoardGame, Long> {
 
     // Méthode pour trouver un BoardGame par son itemId
     Optional<BoardGame> findByItemId(Long itemId);
+
+    @Query(value = "SELECT * FROM board_games WHERE gtin = :gtin", nativeQuery = true)
+    BoardGame findByGtin(String gtin);
 }

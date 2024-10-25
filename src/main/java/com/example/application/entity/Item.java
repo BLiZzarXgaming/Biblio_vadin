@@ -34,7 +34,7 @@ public class Item {
     private String link;
 
     // Relations avec Copy
-    @OneToMany(mappedBy = "item")
+    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL)
     private Set<Copy> copies;
 
     // Relation avec Category

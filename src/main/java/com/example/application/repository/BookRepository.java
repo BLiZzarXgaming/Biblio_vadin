@@ -15,6 +15,7 @@ import java.util.Optional;
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
 
+    //TODO : Delete this method
     @Query("SELECT COUNT(b) FROM Book b JOIN b.item i WHERE "
             + "(:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND "
             + "(:author IS NULL OR LOWER(b.author) LIKE LOWER(CONCAT('%', :author, '%'))) AND "
@@ -31,4 +32,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     // Méthode pour trouver un Book par son itemId
     Optional<Book> findByItemId(Long itemId);
+
+    @Query(value = "SELECT * FROM books WHERE isbn = :isbn", nativeQuery = true)
+    Book findByISBN(@Param("isbn") String isbn);
 }

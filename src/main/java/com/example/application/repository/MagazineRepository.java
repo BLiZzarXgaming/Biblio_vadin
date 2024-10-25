@@ -31,4 +31,7 @@ public interface MagazineRepository extends JpaRepository<Magazine, Long> {
 
     // Méthode pour trouver un Magazine par son itemId
     Optional<Magazine> findByItemId(Long itemId);
+
+    @Query(value = "SELECT * FROM magazines WHERE isni = :isni AND month = :month AND year = :year", nativeQuery = true)
+    Magazine findByIsniAndMonthAndYear(@Param("isni") String isni, @Param("month") String month, @Param("year") String year);
 }

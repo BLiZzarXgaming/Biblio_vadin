@@ -1,14 +1,11 @@
 package com.example.application.service.implementation;
 
-import com.example.application.entity.Category;
-import com.example.application.entity.Item;
-import com.example.application.entity.Publisher;
-import com.example.application.entity.Book;
-import com.example.application.entity.Magazine;
-import com.example.application.entity.BoardGame;
+import com.example.application.entity.*;
 
 import com.example.application.objectcustom.MoisOption;
 import com.example.application.repository.*;
+import jakarta.transaction.Transactional;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -99,8 +96,14 @@ public class ItemServiceImpl {
         }
     }
 
+    @Transactional
     public Item findItemById(Long itemId) {
-        return itemRepository.findById(itemId).orElse(null);
+        Item item = itemRepository.findByIdItem(itemId);
+        if (item != null) {
+            // Initialiser la collection copies
+            Hibernate.initialize(item.getCopies());
+        }
+        return item;
     }
 
     public Book findBookByItemId(Long itemId) {
@@ -113,5 +116,54 @@ public class ItemServiceImpl {
 
     public BoardGame findBoardGameByItemId(Long itemId) {
         return boardGameRepository.findById(itemId).orElse(null);
+    }
+
+    public Book findBookByIsbn(String isbn) {
+        return bookRepository.findByISBN(isbn);
+    }
+
+    public Magazine findMagazineByIsni(String isni, String month, String year) {
+        return magazineRepository.findByIsniAndMonthAndYear(isni, month, year);
+    }
+
+    public BoardGame findBoardGameByGtin(String gtin) {
+        return boardGameRepository.findByGtin(gtin);
+    }
+
+    @Transactional
+    public void saveItem(Item item) throws Exception {
+
+        // Vérifier si l'article existe déjà
+        Item existingItem = itemRepository.findByIdItem(item.getId());
+        if (existingItem != null) {
+            // Ajouter les nouvelles copies à l'article existant
+            for (Copy copy : item.getCopies()) {
+                copy.setItem(existingItem);
+                copyRepository.save(copy);
+            }
+        } else {
+            // Enregistrer l'item
+            itemRepository.save(item);
+
+            // Enregistrer l'entité spécifique
+            if ("book".equals(item.getType()) && item.getBook() != null) {
+                item.getBook().setItem(item);
+                bookRepository.save(item.getBook());
+            } else if ("magazine".equals(item.getType()) && item.getMagazine() != null) {
+                item.getMagazine().setItem(item);
+                magazineRepository.save(item.getMagazine());
+            } else if ("board_game".equals(item.getType()) && item.getBoardGame() != null) {
+                item.getBoardGame().setItem(item);
+                boardGameRepository.save(item.getBoardGame());
+            }
+
+
+
+            // Enregistrer les copies
+            for (Copy copy : item.getCopies()) {
+                copy.setItem(item);
+                copyRepository.save(copy);
+            }
+        }
     }
 }

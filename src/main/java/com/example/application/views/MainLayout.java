@@ -4,6 +4,7 @@ import com.example.application.config.SecurityService;
 import com.example.application.identification_user.MyUserPrincipal;
 import com.example.application.views.myview.*;
 import com.example.application.views.myview.admin.AdminHomeView;
+import com.example.application.views.myview.benevole.BenevoleAjouterView;
 import com.example.application.views.myview.benevole.BenevoleHomeView;
 import com.example.application.views.myview.membre.testm1;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -106,6 +107,7 @@ public class MainLayout extends AppLayout {
     private SideNav createNavigationBenevole(SideNav nav) {
 
         nav.addItem(new SideNavItem("Accueil", BenevoleHomeView.class));
+        nav.addItem(new SideNavItem("Ajout", BenevoleAjouterView.class));
 
         return nav;
     }

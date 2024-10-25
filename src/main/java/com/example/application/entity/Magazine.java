@@ -1,6 +1,8 @@
 package com.example.application.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.util.Date;
 import java.util.Set;
@@ -34,6 +36,19 @@ public class Magazine {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at")
     private Date updatedAt;
+
+    @Size(max = 4)
+    @NotNull
+    @Column(name = "year", nullable = false, length = 4)
+    private String year;
+
+    public String getYear() {
+        return year;
+    }
+
+    public void setYear(String year) {
+        this.year = year;
+    }
 
     public Long getItemId() {
         return itemId;
@@ -91,10 +106,12 @@ public class Magazine {
         this.updatedAt = updatedAt;
     }
 
+
+
     public Magazine() {
     }
 
-    public Magazine(Long itemId, Item item, String isni, String month, Date publicationDate, Date createdAt, Date updatedAt) {
+    public Magazine(Long itemId, Item item, String isni, String month, Date publicationDate, Date createdAt, Date updatedAt, String year) {
         this.itemId = itemId;
         this.item = item;
         this.isni = isni;
@@ -102,5 +119,6 @@ public class Magazine {
         this.publicationDate = publicationDate;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.year = year;
     }
 }

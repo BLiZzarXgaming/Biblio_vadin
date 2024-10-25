@@ -23,7 +23,7 @@ public class Book {
     @Column(nullable = false)
     private String author;
 
-    @Temporal(TemporalType.DATE)
+    //@Temporal(TemporalType.DATE)
     @Column(name = "publication_date", nullable = false)
     private Date publicationDate;
 

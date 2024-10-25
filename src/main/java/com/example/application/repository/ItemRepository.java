@@ -3,6 +3,7 @@ package com.example.application.repository;
 import com.example.application.entity.Category;
 import com.example.application.entity.Item;
 import com.example.application.entity.Publisher;
+import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -85,7 +86,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                         @Param("publisher") Publisher publisher);
 
     // Méthode pour trouver un Item par son ID
-    @Override
-    @Query(value = "SELECT * FROM items WHERE id = :id", nativeQuery = true)
-    Optional<Item> findById(@Param("id") Long id);
+    //@Override
+    @Query("SELECT i FROM Item i LEFT JOIN FETCH i.copies WHERE i.id = :itemId")
+    Item findByIdItem(@Param("id") Long id);
 }
