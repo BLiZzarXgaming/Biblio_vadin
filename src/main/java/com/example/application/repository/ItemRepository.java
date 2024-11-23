@@ -87,6 +87,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     // Méthode pour trouver un Item par son ID
     //@Override
-    @Query("SELECT i FROM Item i LEFT JOIN FETCH i.copies WHERE i.id = :itemId")
+    @Query(value = "SELECT * FROM items i WHERE i.id = :id", nativeQuery = true)
     Item findByIdItem(@Param("id") Long id);
 }
