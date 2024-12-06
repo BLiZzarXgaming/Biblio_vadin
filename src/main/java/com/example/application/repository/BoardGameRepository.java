@@ -1,14 +1,11 @@
 package com.example.application.repository;
 
 import com.example.application.entity.BoardGame;
-import com.example.application.entity.Item;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -30,5 +27,7 @@ public interface BoardGameRepository extends JpaRepository<BoardGame, Long> {
     Optional<BoardGame> findByItemId(Long itemId);
 
     @Query(value = "SELECT * FROM board_games WHERE gtin = :gtin", nativeQuery = true)
-    BoardGame findByGtin(String gtin);
+    BoardGame findByGtinCust(String gtin);
+
+    Optional<BoardGame> findByGtin(String gtin);
 }

@@ -2,7 +2,6 @@ package com.example.application.service.implementation;
 
 import com.example.application.entity.*;
 
-import com.example.application.objectcustom.MoisOption;
 import com.example.application.repository.*;
 import jakarta.transaction.Transactional;
 import org.hibernate.Hibernate;
@@ -12,10 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class ItemServiceImpl {
@@ -33,16 +30,13 @@ public class ItemServiceImpl {
 
     private final PublisherRepository publisherRepository;
 
-    private final CopyRepository copyRepository;
-
-    public ItemServiceImpl(BookRepository bookRepository, MagazineRepository magazineRepository, BoardGameRepository boardGameRepository, ItemRepository itemRepository, CategoryRepository categoryRepository, PublisherRepository publisherRepository, CopyRepository copyRepository) {
+    public ItemServiceImpl(BookRepository bookRepository, MagazineRepository magazineRepository, BoardGameRepository boardGameRepository, ItemRepository itemRepository, CategoryRepository categoryRepository, PublisherRepository publisherRepository) {
         this.bookRepository = bookRepository;
         this.magazineRepository = magazineRepository;
         this.boardGameRepository = boardGameRepository;
         this.itemRepository = itemRepository;
         this.categoryRepository = categoryRepository;
         this.publisherRepository = publisherRepository;
-        this.copyRepository = copyRepository;
     }
 
     public List<Category> getAllCategories() {
@@ -52,7 +46,6 @@ public class ItemServiceImpl {
     public List<Publisher> getAllPublishers() {
         return publisherRepository.findAll();
     }
-
 
     public List<Item> fetchItemsWithFilters(Map<String, Object> searchCriteria, String selectedType, int offset, int limit) {
         Pageable pageable = PageRequest.of(offset / limit, limit); // Pageable object for pagination
@@ -96,14 +89,9 @@ public class ItemServiceImpl {
         }
     }
 
-    @Transactional
     public Item findItemById(Long itemId) {
-        Item item = itemRepository.findByIdItem(itemId);
-        if (item != null) {
-            // Initialiser la collection copies
-            Hibernate.initialize(item.getCopies());
-        }
-        return item;
+        return itemRepository.findByIdItem(itemId);
+
     }
 
     public Book findBookByItemId(Long itemId) {
@@ -118,52 +106,16 @@ public class ItemServiceImpl {
         return boardGameRepository.findById(itemId).orElse(null);
     }
 
-    public Book findBookByIsbn(String isbn) {
-        return bookRepository.findByISBN(isbn);
-    }
+    public Long save(Item item) {
 
-    public Magazine findMagazineByIsni(String isni, String month, String year) {
-        return magazineRepository.findByIsniAndMonthAndYear(isni, month, year);
-    }
-
-    public BoardGame findBoardGameByGtin(String gtin) {
-        return boardGameRepository.findByGtin(gtin);
-    }
-
-    @Transactional
-    public void saveItem(Item item) throws Exception {
-
-        // Vérifier si l'article existe déjà
-        Item existingItem = itemRepository.findByIdItem(item.getId());
-        if (existingItem != null) {
-            // Ajouter les nouvelles copies à l'article existant
-            for (Copy copy : item.getCopies()) {
-                copy.setItem(existingItem);
-                copyRepository.save(copy);
-            }
-        } else {
-            // Enregistrer l'item
-            itemRepository.save(item);
-
-            // Enregistrer l'entité spécifique
-            if ("book".equals(item.getType()) && item.getBook() != null) {
-                item.getBook().setItem(item);
-                bookRepository.save(item.getBook());
-            } else if ("magazine".equals(item.getType()) && item.getMagazine() != null) {
-                item.getMagazine().setItem(item);
-                magazineRepository.save(item.getMagazine());
-            } else if ("board_game".equals(item.getType()) && item.getBoardGame() != null) {
-                item.getBoardGame().setItem(item);
-                boardGameRepository.save(item.getBoardGame());
-            }
-
-
-
-            // Enregistrer les copies
-            for (Copy copy : item.getCopies()) {
-                copy.setItem(item);
-                copyRepository.save(copy);
+        if (item.getId() != null) {
+            Item existingItem = itemRepository.findByIdItem(item.getId());
+            if (existingItem != null) {
+                return 0L;
             }
         }
+
+        return itemRepository.save(item).getId();
     }
+
 }

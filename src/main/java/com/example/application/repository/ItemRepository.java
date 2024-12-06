@@ -89,4 +89,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     //@Override
     @Query(value = "SELECT * FROM items i WHERE i.id = :id", nativeQuery = true)
     Item findByIdItem(@Param("id") Long id);
+
+
 }

@@ -1,15 +1,12 @@
 package com.example.application.repository;
 
-import com.example.application.entity.Item;
 import com.example.application.entity.Magazine;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -33,5 +30,9 @@ public interface MagazineRepository extends JpaRepository<Magazine, Long> {
     Optional<Magazine> findByItemId(Long itemId);
 
     @Query(value = "SELECT * FROM magazines WHERE isni = :isni AND month = :month AND year = :year", nativeQuery = true)
-    Magazine findByIsniAndMonthAndYear(@Param("isni") String isni, @Param("month") String month, @Param("year") String year);
+    Magazine findByIsniAndMonthAndYearCust(@Param("isni") String isni, @Param("month") String month, @Param("year") String year);
+
+    Optional<Magazine> findByIsniAndMonthAndYear(String isni, String month, String year);
+
+
 }
