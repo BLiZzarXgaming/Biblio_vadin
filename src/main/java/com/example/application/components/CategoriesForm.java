@@ -8,10 +8,11 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 
-public class CategoriesForm extends VerticalLayout {
+public class CategoriesForm extends HorizontalLayout {
     // name
     // description
     // id
@@ -37,7 +38,7 @@ public class CategoriesForm extends VerticalLayout {
         add(categoryComboBox);
 
         // Button to open the dialog
-        addCategoryButton = new Button("Ajouter une catégorie", event -> addCategoryDialog.open());
+        addCategoryButton = new Button("Ajouter", event -> addCategoryDialog.open());
         add(addCategoryButton);
 
         addCategoryDialog = createAddCategoryDialog();

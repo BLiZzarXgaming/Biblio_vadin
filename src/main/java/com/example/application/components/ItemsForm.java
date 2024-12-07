@@ -15,6 +15,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import java.lang.reflect.Type;
 
 public class ItemsForm extends VerticalLayout {
+
     // type
     //title
     // category (id)
@@ -131,6 +132,20 @@ public class ItemsForm extends VerticalLayout {
         suppliersFrom.setReadOnly(readOnly);
         valueField.setReadOnly(readOnly);
         linkField.setReadOnly(readOnly);
+    }
+
+    public void setItemById(Long id) {
+        Item item = itemService.findItemById(id);
+
+        setId(item.getId());
+        titleField.setValue(item.getTitle() != null ? item.getTitle() : "");
+        categoriesForm.setSelectedCategory(item.getCategory().getId());
+        publishersForm.setSelectedPublisherById(item.getPublisher().getId());
+        suppliersFrom.setSelectedSupplier(item.getSupplier());
+        valueField.setValue(item.getLink() != null ? item.getValue() : 0.0);
+        linkField.setValue(item.getLink() != null ? item.getLink() : "");
+
+        setReadeOnly(true);
     }
 
     public Item getItem() {

@@ -76,6 +76,22 @@ public class BoardGamesForm extends VerticalLayout {
         sendNotification("Le jeu de société a été enregistré", "success", 5000);
     }
 
+    public BoardGame searchBoardGame() {
+        String gtin = gtinField.getValue();
+        BoardGame boardGame = boardGameService.findByGtin(gtin);
+        if (boardGame != null) {
+            fillFields(boardGame);
+            return boardGame;
+        } else {
+            sendNotification("Jeu de société non trouvé", "error", 5000);
+            return null;
+        }
+    }
+
+    public void setBoardGameItemId(Long itemId) {
+        this.itemId = itemId;
+    }
+
     public void setBoardGameByGtin(String gtin) {
         BoardGame boardGame = boardGameService.findByGtin(gtin);
         if (boardGame != null) {

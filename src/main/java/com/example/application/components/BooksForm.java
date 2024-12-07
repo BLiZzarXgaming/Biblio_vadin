@@ -45,6 +45,19 @@ public class BooksForm extends VerticalLayout {
         add(formLayout);
     }
 
+    public Book searchBook() {
+
+        String isbn = isbnField.getValue();
+        Book book = bookService.findByIsbn(isbn);
+        if (book != null) {
+            fillFields(book);
+            return book;
+        } else {
+            sendNotification("Livre non trouvé", "error", 5000);
+            return null;
+        }
+    }
+
     public void saveBook() {
         String isbn = isbnField.getValue();
         String author = authorField.getValue();
@@ -70,11 +83,13 @@ public class BooksForm extends VerticalLayout {
         sendNotification("Le livre a été ajouté", "success", 3000);
     }
 
-    public void setbookByIsbn(String isbn) {
+    public boolean setbookByIsbn(String isbn) {
         Book book = bookService.findByIsbn(isbn);
         if (book != null) {
             fillFields(book);
+            return true;
         }
+        return false;
     }
 
     public void setBookByItemId(Long itemId) {

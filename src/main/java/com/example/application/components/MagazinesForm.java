@@ -55,6 +55,21 @@ public class MagazinesForm extends VerticalLayout {
         add(formLayout);
     }
 
+    public Magazine searchMagazine() {
+        String isni = isniField.getValue();
+        MoisOption month = monthField.getValue();
+        Integer year = yearField.getValue();
+
+        Magazine magazine = magazinesService.findByIsniAndMonthAndYear(isni, month.getNumero(), year.toString());
+        if (magazine != null) {
+            fillFields(magazine);
+            return magazine;
+        } else {
+            sendNotification("Magazine non trouvé", "error", 5000);
+            return null;
+        }
+    }
+
     public void saveMagazine() {
         String isni = isniField.getValue();
         MoisOption month = monthField.getValue();
@@ -94,6 +109,10 @@ public class MagazinesForm extends VerticalLayout {
         if (magazine != null) {
             fillFields(magazine);
         }
+    }
+
+    public void setMagazineItemId(Long itemId) {
+        this.itemId = itemId;
     }
 
     private void fillFields(Magazine magazine) {
