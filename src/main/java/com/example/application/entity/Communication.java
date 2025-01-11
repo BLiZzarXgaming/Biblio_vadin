@@ -1,51 +1,98 @@
 package com.example.application.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-import java.util.Date;
-import java.util.Set;
+import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "communications")
 public class Communication {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(name = "message_type", nullable = false)
-    private String messageType;
-
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String content;
-
-    @Temporal(TemporalType.DATE)
-    @Column(name = "send_date", nullable = false)
-    private Date sendDate;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at")
-    private Date createdAt;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_at")
-    private Date updatedAt;
-
-    // Relation avec User (Member)
-    @ManyToOne
+    @NotNull
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "member_id", nullable = false)
     private User member;
 
-    public Communication() {
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "message_type", nullable = false)
+    private String messageType;
+
+    @NotNull
+    @Lob
+    @Column(name = "content", nullable = false)
+    private String content;
+
+    @NotNull
+    @Column(name = "send_date", nullable = false)
+    private LocalDate sendDate;
+
+    @Column(name = "created_at")
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    public Long getId() {
+        return id;
     }
 
-    public Communication(Long id, String messageType, String content, Date sendDate, Date createdAt, Date updatedAt, User member) {
+    public void setId(Long id) {
         this.id = id;
-        this.messageType = messageType;
-        this.content = content;
-        this.sendDate = sendDate;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+    }
+
+    public User getMember() {
+        return member;
+    }
+
+    public void setMember(User member) {
         this.member = member;
     }
+
+    public String getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(String messageType) {
+        this.messageType = messageType;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public LocalDate getSendDate() {
+        return sendDate;
+    }
+
+    public void setSendDate(LocalDate sendDate) {
+        this.sendDate = sendDate;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }

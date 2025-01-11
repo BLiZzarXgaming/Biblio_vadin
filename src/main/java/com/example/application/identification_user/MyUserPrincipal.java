@@ -1,5 +1,6 @@
 package com.example.application.identification_user;
 
+import com.example.application.entity.Role;
 import com.example.application.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

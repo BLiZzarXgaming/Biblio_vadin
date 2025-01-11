@@ -1,7 +1,8 @@
 package com.example.application.components;
 
 import com.example.application.entity.Category;
-import com.example.application.service.implementation.CategoryServiceImpl;
+import com.example.application.entity.DTO.CategoryDto;
+import com.example.application.service.implementation.CategoryServiceV2;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -9,17 +10,18 @@ import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+
+import java.util.Optional;
 
 public class CategoriesForm extends HorizontalLayout {
     // name
     // description
     // id
 
-    private CategoryServiceImpl categoryService;
+    private CategoryServiceV2 categoryService;
 
-    private ComboBox<Category> categoryComboBox;
+    private ComboBox<CategoryDto> categoryComboBox;
     private Dialog addCategoryDialog;
     private TextField nameField;
     private TextField descriptionField;
@@ -28,13 +30,13 @@ public class CategoriesForm extends HorizontalLayout {
     private Notification notification;
     private boolean disableNotification = false;
 
-    public CategoriesForm(CategoryServiceImpl categoryService) {
+    public CategoriesForm(CategoryServiceV2 categoryService) {
         this.categoryService = categoryService;
 
         // ComboBox for categories
         categoryComboBox = new ComboBox<>("Sélectionné la catégorie");
         categoryComboBox.setItems(categoryService.findAll());
-        categoryComboBox.setItemLabelGenerator(Category::getName);
+        categoryComboBox.setItemLabelGenerator(CategoryDto::getName);
         add(categoryComboBox);
 
         // Button to open the dialog
@@ -67,12 +69,12 @@ public class CategoriesForm extends HorizontalLayout {
             return;
         }
 
-        Category category = new Category();
-        category.setName(name);
-        category.setDescription(description);
-        int result = categoryService.save(category);
+        Optional<CategoryDto> category = Optional.of(new CategoryDto());
+        category.get().setName(name);
+        category.get().setDescription(description);
+        CategoryDto result = categoryService.save(category.orElse(null));
 
-        if (result == 0) {
+        if (result == null) {
             sendNotification("La categorie existe déjà", "error", 5000);
             return;
         }
@@ -82,7 +84,7 @@ public class CategoriesForm extends HorizontalLayout {
         category = categoryService.findByName(name);
 
         categoryComboBox.setItems(categoryService.findAll());
-        categoryComboBox.setValue(category);
+        categoryComboBox.setValue(category.get());
         addCategoryDialog.close();
     }
 
@@ -91,13 +93,13 @@ public class CategoriesForm extends HorizontalLayout {
         addCategoryButton.setVisible(!disable);
     }
 
-    public Category getSelectedCategory() {
+    public CategoryDto getSelectedCategory() {
         return categoryComboBox.getValue();
     }
 
     public void setSelectedCategory(Long id) {
-        Category category = categoryService.findById(id);
-        setSelectedCategory(category);
+        Optional<CategoryDto> category = categoryService.findById(id);
+        setSelectedCategory(category.orElse(null));
     }
 
     public void setReadOnly(boolean readOnly) {
@@ -105,7 +107,7 @@ public class CategoriesForm extends HorizontalLayout {
         disableAddBtn(readOnly);
     }
 
-    private void setSelectedCategory(Category category) {
+    private void setSelectedCategory(CategoryDto category) {
         categoryComboBox.setValue(category);
     }
 

@@ -1,8 +1,12 @@
 package com.example.application.components;
 
+import com.example.application.entity.DTO.ItemDto;
+import com.example.application.entity.DTO.MagazineDto;
+import com.example.application.entity.Item;
 import com.example.application.entity.Magazine;
 import com.example.application.objectcustom.MoisOption;
-import com.example.application.service.implementation.MagazineServiceimpl;
+import com.example.application.service.implementation.ItemServiceV2;
+import com.example.application.service.implementation.MagazineServiceV2;
 import com.example.application.utils.DateUtils;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -14,23 +18,26 @@ import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 public class MagazinesForm extends VerticalLayout {
 
-    private MagazineServiceimpl magazinesService;
+    private MagazineServiceV2 magazinesService;
+    private ItemServiceV2 itemService;
 
     private TextField isniField;
     private ComboBox<MoisOption> monthField;
     private DatePicker publicationDateField;
     private IntegerField yearField;
-    private Long itemId;
+    private ItemDto item;
 
     private Notification notification;
     private boolean disableNotification = false;
 
-    public MagazinesForm(MagazineServiceimpl magazinesService) {
+    public MagazinesForm(MagazineServiceV2 magazinesService, ItemServiceV2 itemService) {
         this.magazinesService = magazinesService;
-        itemId = null;
+        this.itemService = itemService;
+        item = null;
 
         FormLayout formLayout = new FormLayout();
 
@@ -55,15 +62,15 @@ public class MagazinesForm extends VerticalLayout {
         add(formLayout);
     }
 
-    public Magazine searchMagazine() {
+    public MagazineDto searchMagazine() {
         String isni = isniField.getValue();
         MoisOption month = monthField.getValue();
         Integer year = yearField.getValue();
 
-        Magazine magazine = magazinesService.findByIsniAndMonthAndYear(isni, month.getNumero(), year.toString());
-        if (magazine != null) {
-            fillFields(magazine);
-            return magazine;
+        Optional<MagazineDto> magazine = magazinesService.findByIsniAndMonthAndYear(isni, month.getNumero(), year.toString());
+        if (magazine.isPresent()) {
+            fillFields(magazine.orElse(null));
+            return magazine.orElse(null);
         } else {
             sendNotification("Magazine non trouvé", "error", 5000);
             return null;
@@ -76,20 +83,20 @@ public class MagazinesForm extends VerticalLayout {
         Integer year = yearField.getValue();
         LocalDate publicationDate = publicationDateField.getValue();
 
-        if (isni == null || month == null || year == null || publicationDate == null || itemId == null) {
+        if (isni == null || month == null || year == null || publicationDate == null || item == null) {
             sendNotification("Veuillez remplir tous les champs", "error", 5000);
             return;
         }
 
-        Magazine magazine = new Magazine();
+        MagazineDto magazine = new MagazineDto();
         magazine.setIsni(isni);
         magazine.setMonth(month.getNom());
         magazine.setYear(year.toString());
-        magazine.setPublicationDate(java.sql.Date.valueOf(publicationDate));
-        magazine.setItemId(itemId);
-        int result = magazinesService.save(magazine);
+        magazine.setPublicationDate(publicationDate);
+        magazine.setItem(item);
+        MagazineDto result = magazinesService.save(magazine);
 
-        if (result == 0) {
+        if (result == null) {
             sendNotification("Le magazine existe déjà", "error", 5000);
             return;
         }
@@ -98,29 +105,30 @@ public class MagazinesForm extends VerticalLayout {
     }
 
     public void setMagazineByIsni(String isni, String month, String year) {
-        Magazine magazine = magazinesService.findByIsniAndMonthAndYear(isni, month, year);
-        if (magazine != null) {
-            fillFields(magazine);
+        Optional<MagazineDto> magazine = magazinesService.findByIsniAndMonthAndYear(isni, month, year);
+        if (magazine.isPresent()) {
+            fillFields(magazine.orElse(null));
         }
     }
 
     public void setMagazineByItemId(Long itemId) {
-        Magazine magazine = magazinesService.findByItemId(itemId);
-        if (magazine != null) {
-            fillFields(magazine);
+        Optional<MagazineDto> magazine = magazinesService.findById(itemId);
+        if (magazine.isPresent()) {
+            fillFields(magazine.orElse(null));
         }
     }
 
     public void setMagazineItemId(Long itemId) {
-        this.itemId = itemId;
+        item = itemService.findById(itemId).orElse(null);
     }
 
-    private void fillFields(Magazine magazine) {
+    private void fillFields(MagazineDto magazine) {
         isniField.setValue(magazine.getIsni());
         monthField.setValue(new MoisOption(magazine.getMonth(), magazine.getMonth()));
         yearField.setValue(Integer.valueOf(magazine.getYear()));
-        publicationDateField.setValue(DateUtils.convertToLocalDateViaInstant(magazine.getPublicationDate()));
-        this.itemId = magazine.getItemId();
+        publicationDateField.setValue(magazine.getPublicationDate());
+
+        item = itemService.findById(magazine.getId()).orElse(null);
 
         setFieldsReadOnly(true);
     }
@@ -132,7 +140,7 @@ public class MagazinesForm extends VerticalLayout {
         publicationDateField.setReadOnly(readOnly);
     }
 
-    public Magazine getMagazineInfo() {
+    public MagazineDto getMagazineInfo() {
         String isni = isniField.getValue();
         MoisOption month = monthField.getValue();
         Integer year = yearField.getValue();
@@ -142,12 +150,12 @@ public class MagazinesForm extends VerticalLayout {
             return null;
         }
 
-        Magazine magazine = new Magazine();
+        MagazineDto magazine = new MagazineDto();
         magazine.setIsni(isni);
         magazine.setMonth(month.getNom());
         magazine.setYear(year.toString());
-        magazine.setPublicationDate(java.sql.Date.valueOf(publicationDate));
-        magazine.setItemId(itemId);
+        magazine.setPublicationDate(publicationDate);
+        magazine.setItem(item);
 
         return magazine;
     }

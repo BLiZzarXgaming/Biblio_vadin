@@ -1,41 +1,31 @@
 package com.example.application.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-import java.util.Date;
-import java.util.Set;
+import java.time.Instant;
 
 @Entity
 @Table(name = "roles")
 public class Role {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(nullable = false)
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at")
-    private Date createdAt;
+    private Instant createdAt;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at")
-    private Date updatedAt;
-
-    // Relation avec User
-    @OneToMany(mappedBy = "role")
-    private Set<User> users;
-
-    // Relation avec Permission
-    @ManyToMany
-    @JoinTable(
-            name = "role_permissions",
-            joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id")
-    )
-    private Set<Permission> permissions;
+    private Instant updatedAt;
 
     public Long getId() {
         return id;
@@ -53,47 +43,27 @@ public class Role {
         this.name = name;
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Date getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Date updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public Set<User> getUsers() {
-        return users;
-    }
-
-    public void setUsers(Set<User> users) {
-        this.users = users;
-    }
-
-    public Set<Permission> getPermissions() {
-        return permissions;
-    }
-
-    public void setPermissions(Set<Permission> permissions) {
-        this.permissions = permissions;
     }
 
     public Role() {
     }
 
-    public Role(Long id, String name, Date createdAt, Date updatedAt, Set<User> users, Set<Permission> permissions) {
+    public Role(Long id, String name) {
         this.id = id;
         this.name = name;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.users = users;
-        this.permissions = permissions;
     }
 }

@@ -1,71 +1,81 @@
 package com.example.application.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
-import java.util.Date;
-import java.util.Set;
+import java.time.Instant;
 
 @Entity
 @Table(name = "board_games")
 public class BoardGame {
-
     @Id
-    private Long itemId;
+    @Column(name = "item_id", nullable = false)
+    private Long id;
 
-    @OneToOne
     @MapsId
-    @JoinColumn(name = "item_id")
+    @OneToOne(fetch = FetchType.EAGER, optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
+    @NotNull
     @Column(name = "number_of_pieces", nullable = false)
-    private int numberOfPieces;
+    private Integer numberOfPieces;
 
+    @NotNull
     @Column(name = "recommended_age", nullable = false)
-    private int recommendedAge;
+    private Integer recommendedAge;
 
-    @Column(name = "game_rules", columnDefinition = "TEXT", nullable = false)
+    @NotNull
+    @Size(max = 65535)
+    @Column(name = "game_rules", nullable = false)
     private String gameRules;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at")
-    private Date createdAt;
+    private Instant createdAt;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at")
-    private Date updatedAt;
+    private Instant updatedAt;
 
-    @Column(name = "gtin", nullable = false)
+    @Size(max = 16)
+    @NotNull
+    @ColumnDefault("''")
+    @Column(name = "gtin", nullable = false, length = 16)
     private String gtin;
 
-    public Long getItemId() {
-        return itemId;
+    public Long getId() {
+        return id;
     }
 
-    public void setItemId(Long itemId) {
-        this.itemId = itemId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Item getItem() {
         return item;
     }
 
-    public void setItem(Item item) {
-        this.item = item;
+    public void setItem(Item items) {
+        this.item = items;
     }
 
-    public int getNumberOfPieces() {
+    public Integer getNumberOfPieces() {
         return numberOfPieces;
     }
 
-    public void setNumberOfPieces(int numberOfPieces) {
+    public void setNumberOfPieces(Integer numberOfPieces) {
         this.numberOfPieces = numberOfPieces;
     }
 
-    public int getRecommendedAge() {
+    public Integer getRecommendedAge() {
         return recommendedAge;
     }
 
-    public void setRecommendedAge(int recommendedAge) {
+    public void setRecommendedAge(Integer recommendedAge) {
         this.recommendedAge = recommendedAge;
     }
 
@@ -77,19 +87,19 @@ public class BoardGame {
         this.gameRules = gameRules;
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Date getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Date updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 
@@ -101,17 +111,4 @@ public class BoardGame {
         this.gtin = gtin;
     }
 
-    public BoardGame() {
-    }
-
-    public BoardGame(Long itemId, Item item, int numberOfPieces, int recommendedAge, String gameRules, Date createdAt, Date updatedAt, String gtin) {
-        this.itemId = itemId;
-        this.item = item;
-        this.numberOfPieces = numberOfPieces;
-        this.recommendedAge = recommendedAge;
-        this.gameRules = gameRules;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.gtin = gtin;
-    }
 }

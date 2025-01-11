@@ -1,39 +1,51 @@
 package com.example.application.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import jakarta.validation.constraints.NotNull;
+import org.hibernate.Hibernate;
 
-import java.io.Serializable;
-import java.util.Date;
 import java.util.Objects;
-import java.util.Set;
 
-public class UserRelationshipId implements Serializable {
+@Embeddable
+public class UserRelationshipId implements java.io.Serializable {
+    private static final long serialVersionUID = 5882286935219285798L;
+    @NotNull
+    @Column(name = "parent_id", nullable = false)
+    private Long parentId;
 
-    private Long parent;
-    private Long child;
+    @NotNull
+    @Column(name = "child_id", nullable = false)
+    private Long childId;
 
-    // Constructeurs, equals, hashCode
-    public UserRelationshipId() {}
-
-    public UserRelationshipId(Long parent, Long child) {
-        this.parent = parent;
-        this.child = child;
+    public Long getParentId() {
+        return parentId;
     }
 
-    // getters and setters
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+    }
+
+    public Long getChildId() {
+        return childId;
+    }
+
+    public void setChildId(Long childId) {
+        this.childId = childId;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        UserRelationshipId that = (UserRelationshipId) o;
-
-        return Objects.equals(parent, that.parent) && Objects.equals(child, that.child);
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        UserRelationshipId entity = (UserRelationshipId) o;
+        return Objects.equals(this.childId, entity.childId) &&
+                Objects.equals(this.parentId, entity.parentId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(parent, child);
+        return Objects.hash(childId, parentId);
     }
+
 }

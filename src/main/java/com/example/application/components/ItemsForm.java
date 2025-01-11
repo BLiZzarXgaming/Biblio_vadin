@@ -1,10 +1,11 @@
 package com.example.application.components;
 
+import com.example.application.entity.DTO.ItemDto;
 import com.example.application.entity.Item;
-import com.example.application.service.implementation.CategoryServiceImpl;
-import com.example.application.service.implementation.ItemServiceImpl;
-import com.example.application.service.implementation.PublisherServiceImpl;
-import com.example.application.service.implementation.SupplierServiceImpl;
+import com.example.application.service.implementation.CategoryServiceV2;
+import com.example.application.service.implementation.ItemServiceV2;
+import com.example.application.service.implementation.PublisherServiceV2;
+import com.example.application.service.implementation.SupplierServiceV2;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
@@ -12,7 +13,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 
-import java.lang.reflect.Type;
+import java.util.Optional;
 
 public class ItemsForm extends VerticalLayout {
 
@@ -25,10 +26,10 @@ public class ItemsForm extends VerticalLayout {
     // link
     // id
 
-    private ItemServiceImpl itemService;
-    private CategoryServiceImpl categoryService;
-    private PublisherServiceImpl publisherService;
-    private SupplierServiceImpl supplierService;
+    private ItemServiceV2 itemService;
+    private CategoryServiceV2 categoryService;
+    private PublisherServiceV2 publisherService;
+    private SupplierServiceV2 supplierService;
 
     private String type;
     private TextField titleField;
@@ -42,7 +43,7 @@ public class ItemsForm extends VerticalLayout {
     private boolean disableNotification = false;
     private Notification notification;
 
-    public ItemsForm(ItemServiceImpl itemService, CategoryServiceImpl categoryService, PublisherServiceImpl publisherService, SupplierServiceImpl supplierService) {
+    public ItemsForm(ItemServiceV2 itemService, CategoryServiceV2 categoryService, PublisherServiceV2 publisherService, SupplierServiceV2 supplierService) {
         this.itemService = itemService;
         this.categoryService = categoryService;
         this.publisherService = publisherService;
@@ -89,7 +90,7 @@ public class ItemsForm extends VerticalLayout {
             return;
         }
 
-        Item item = new Item();
+        ItemDto item = new ItemDto();
         item.setTitle(title);
         item.setCategory(categoriesForm.getSelectedCategory());
         item.setPublisher(publishersForm.getSelectedPublisher());
@@ -102,14 +103,14 @@ public class ItemsForm extends VerticalLayout {
             item.setId(id);
         }
 
-        Long result =  itemService.save(item);
+        ItemDto result =  itemService.save(item);
 
-        if (result == 0) {
+        if (result == null) {
             sendNotification("L'article existe déjà", "error", 5000);
             return;
         }
 
-        setId(result);
+        setId(result.getId());
 
         sendNotification("L'article a été ajouté avec succès", "success", 5000);
 
@@ -135,21 +136,21 @@ public class ItemsForm extends VerticalLayout {
     }
 
     public void setItemById(Long id) {
-        Item item = itemService.findItemById(id);
+        Optional<ItemDto> item = itemService.findById(id);
 
-        setId(item.getId());
-        titleField.setValue(item.getTitle() != null ? item.getTitle() : "");
-        categoriesForm.setSelectedCategory(item.getCategory().getId());
-        publishersForm.setSelectedPublisherById(item.getPublisher().getId());
-        suppliersFrom.setSelectedSupplier(item.getSupplier());
-        valueField.setValue(item.getLink() != null ? item.getValue() : 0.0);
-        linkField.setValue(item.getLink() != null ? item.getLink() : "");
+        setId(item.get().getId());
+        titleField.setValue(item.get().getTitle() != null ? item.get().getTitle() : "");
+        categoriesForm.setSelectedCategory(item.get().getCategory().getId());
+        publishersForm.setSelectedPublisherById(item.get().getPublisher().getId());
+        suppliersFrom.setSelectedSupplier(item.get().getSupplier());
+        valueField.setValue(item.get().getLink() != null ? item.get().getValue() : 0.0);
+        linkField.setValue(item.get().getLink() != null ? item.get().getLink() : "");
 
         setReadeOnly(true);
     }
 
-    public Item getItem() {
-        Item item = new Item();
+    public ItemDto getItem() {
+        ItemDto item = new ItemDto();
         item.setId(id);
         item.setTitle(titleField.getValue());
         item.setCategory(categoriesForm.getSelectedCategory());

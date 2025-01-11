@@ -1,66 +1,57 @@
 package com.example.application.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-import java.util.Date;
-import java.util.Set;
+import java.time.Instant;
 
 @Entity
 @Table(name = "items")
 public class Item {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(nullable = false)
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "type", nullable = false)
     private String type;
 
-    @Column(nullable = false)
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(nullable = false)
-    private double value;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at")
-    private Date createdAt;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_at")
-    private Date updatedAt;
-
-    @Column(name = "link")
-    private String link;
-
-    // Relations avec Copy
-    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL)
-    private Set<Copy> copies;
-
-    // Relation avec Category
-    @ManyToOne
+    @NotNull
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "category", nullable = false)
     private Category category;
 
-    // Relation avec Publisher
-    @ManyToOne
+    @NotNull
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "publisher_id", nullable = false)
     private Publisher publisher;
 
-    // Relation avec Supplier
-    @ManyToOne
+    @NotNull
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "supplier_id", nullable = false)
     private Supplier supplier;
 
-    // Sous-classes
-    @OneToOne(mappedBy = "item", cascade = CascadeType.ALL)
-    private Book book;
+    @NotNull
+    @Column(name = "value", nullable = false)
+    private Double value;
 
-    @OneToOne(mappedBy = "item", cascade = CascadeType.ALL)
-    private Magazine magazine;
+    @Column(name = "created_at")
+    private Instant createdAt;
 
-    @OneToOne(mappedBy = "item", cascade = CascadeType.ALL)
-    private BoardGame boardGame;
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @Size(max = 2000)
+    @Column(name = "link", length = 2000)
+    private String link;
 
     public Long getId() {
         return id;
@@ -84,38 +75,6 @@ public class Item {
 
     public void setTitle(String title) {
         this.title = title;
-    }
-
-    public double getValue() {
-        return value;
-    }
-
-    public void setValue(double value) {
-        this.value = value;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Date updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Set<Copy> getCopies() {
-        return copies;
-    }
-
-    public void setCopies(Set<Copy> copies) {
-        this.copies = copies;
     }
 
     public Category getCategory() {
@@ -142,28 +101,28 @@ public class Item {
         this.supplier = supplier;
     }
 
-    public Book getBook() {
-        return book;
+    public Double getValue() {
+        return value;
     }
 
-    public void setBook(Book book) {
-        this.book = book;
+    public void setValue(Double value) {
+        this.value = value;
     }
 
-    public Magazine getMagazine() {
-        return magazine;
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
-    public void setMagazine(Magazine magazine) {
-        this.magazine = magazine;
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 
-    public BoardGame getBoardGame() {
-        return boardGame;
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void setBoardGame(BoardGame boardGame) {
-        this.boardGame = boardGame;
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public String getLink() {
@@ -174,24 +133,4 @@ public class Item {
         this.link = link;
     }
 
-
-    public Item() {
-    }
-
-    public Item(Long id, String type, String title, double value, Date createdAt, Date updatedAt, Set<Copy> copies, Category category, Publisher publisher, Supplier supplier, Book book, Magazine magazine, BoardGame boardGame, String link) {
-        this.id = id;
-        this.type = type;
-        this.title = title;
-        this.value = value;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.copies = copies;
-        this.category = category;
-        this.publisher = publisher;
-        this.supplier = supplier;
-        this.book = book;
-        this.magazine = magazine;
-        this.boardGame = boardGame;
-        this.link = link;
-    }
 }

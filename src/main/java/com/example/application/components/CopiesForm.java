@@ -1,8 +1,10 @@
 package com.example.application.components;
 
 import com.example.application.entity.Copy;
+import com.example.application.entity.DTO.CopyDto;
+import com.example.application.entity.DTO.ItemDto;
 import com.example.application.entity.Item;
-import com.example.application.service.implementation.CopyServiceImpl;
+import com.example.application.service.implementation.CopyServiceV2;
 import com.example.application.utils.DateUtils;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -17,7 +19,6 @@ import com.vaadin.flow.component.textfield.NumberField;
 
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class CopiesForm extends VerticalLayout {
@@ -45,15 +46,15 @@ public class CopiesForm extends VerticalLayout {
     //price
     //id
 
-    private CopyServiceImpl copyService;
+    private CopyServiceV2 copyService;
 
     private Long item_id;
     private String status;
     private DatePicker acquisition_date;
     private NumberField price;
     private Long id;
-    private Grid<Copy> copiesGrid;
-    private List<Copy> copiesDataGrid;
+    private Grid<CopyDto> copiesGrid;
+    private List<CopyDto> copiesDataGrid;
     private Button addCopyButton;
 
     private Notification notification;
@@ -65,10 +66,10 @@ public class CopiesForm extends VerticalLayout {
     private Button saveEditButton;
 
     private Long idTempscount = 1L;
-    private Item item;
+    private ItemDto item;
 
 
-    public CopiesForm(CopyServiceImpl copyService) {
+    public CopiesForm(CopyServiceV2 copyService) {
         this.copyService = copyService;
 
         FormLayout formLayout = new FormLayout();
@@ -85,11 +86,11 @@ public class CopiesForm extends VerticalLayout {
 
         add(addCopyButton);
 
-        copiesDataGrid = new ArrayList<Copy>();
+        copiesDataGrid = new ArrayList<CopyDto>();
 
         copiesGrid = new Grid<>();
-        copiesGrid.addColumn(Copy::getAcquisitionDate).setHeader("Date d'acquisition");
-        copiesGrid.addColumn(Copy::getPrice).setHeader("Prix");
+        copiesGrid.addColumn(CopyDto::getAcquisitionDate).setHeader("Date d'acquisition");
+        copiesGrid.addColumn(CopyDto::getPrice).setHeader("Prix");
         copiesGrid.addComponentColumn(copy -> {
             com.vaadin.flow.component.button.Button editButton = new Button("Modifier");
             editButton.addClickListener(event -> openEditDialog(copy));
@@ -117,17 +118,17 @@ public class CopiesForm extends VerticalLayout {
         editDialog.add(editFormLayout);
     }
 
-    private void openEditDialog(Copy copy) {
-        editAcquisitionDate.setValue(DateUtils.convertToLocalDateViaInstant(copy.getAcquisitionDate()));
+    private void openEditDialog(CopyDto copy) {
+        editAcquisitionDate.setValue(copy.getAcquisitionDate());
         editPrice.setValue(copy.getPrice());
         id = copy.getId();
         editDialog.open();
     }
 
     private void saveEditCopy() {
-        Copy copy = copiesDataGrid.stream().filter(c -> c.getId().equals(id)).findFirst().orElse(null);
+        CopyDto copy = copiesDataGrid.stream().filter(c -> c.getId().equals(id)).findFirst().orElse(null);
         if (copy != null) {
-            copy.setAcquisitionDate(DateUtils.convertToDateViaInstant(editAcquisitionDate.getValue()));
+            copy.setAcquisitionDate(editAcquisitionDate.getValue());
             copy.setPrice(editPrice.getValue());
             updateGrid();
             sendNotification("Copie modifiée avec succès", "success", 3000);
@@ -143,10 +144,10 @@ public class CopiesForm extends VerticalLayout {
     }
 
     private void addCopy() {
-        Copy copy = new Copy();
+        CopyDto copy = new CopyDto();
         copy.setId(idTempscount);
         idTempscount++;
-        copy.setAcquisitionDate(DateUtils.convertToDateViaInstant(acquisition_date.getValue()));
+        copy.setAcquisitionDate(acquisition_date.getValue());
         copy.setPrice(price.getValue());
         copy.setStatus(Type.AVAILABLE.getValue());
         copiesDataGrid.add(copy);
@@ -156,24 +157,23 @@ public class CopiesForm extends VerticalLayout {
         acquisition_date.clear();
     }
 
-    public void setItem(Item item) {
+    public void setItem(ItemDto item) {
         this.item = item;
     }
 
     public void saveAllCopies() {
-        for (Copy copy : copiesDataGrid) {
-            copy.setItem(item);
-            copy.setId(null);
-            copyService.save(copy);
+        for (CopyDto copy : copiesDataGrid) {
+            CopyDto temp = new CopyDto();
+            temp.setAcquisitionDate(copy.getAcquisitionDate());
+            temp.setPrice(copy.getPrice());
+            temp.setStatus(copy.getStatus());
+            temp.setItem(item);
+            copyService.insertCopy(temp);
         }
         sendNotification("Toutes les copies ont été enregistrées avec succès", "success", 3000);
     }
 
-    private void editCopy(Copy copy) {
-        // Logic to edit the copy
-    }
-
-    private void deleteCopy(Copy copy) {
+    private void deleteCopy(CopyDto copy) {
         copiesDataGrid.remove(copy);
         updateGrid();
     }

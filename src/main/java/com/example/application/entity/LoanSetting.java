@@ -1,38 +1,108 @@
 package com.example.application.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
-import java.util.Date;
-import java.util.Set;
+import java.time.Instant;
 
 @Entity
 @Table(name = "loan_settings")
 public class LoanSetting {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Long id;
 
+    @NotNull
     @Column(name = "loan_duration_days", nullable = false)
-    private int loanDurationDays;
+    private Integer loanDurationDays;
 
+    @NotNull
     @Column(name = "max_loans_adult", nullable = false)
-    private int maxLoansAdult;
+    private Integer maxLoansAdult;
 
+    @NotNull
     @Column(name = "max_loans_child", nullable = false)
-    private int maxLoansChild;
+    private Integer maxLoansChild;
 
+    @NotNull
     @Column(name = "max_reservations_adult", nullable = false)
-    private int maxReservationsAdult;
+    private Integer maxReservationsAdult;
 
+    @NotNull
     @Column(name = "max_reservations_child", nullable = false)
-    private int maxReservationsChild;
+    private Integer maxReservationsChild;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at")
-    private Date createdAt;
+    private Instant createdAt;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at")
-    private Date updatedAt;
+    private Instant updatedAt;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Integer getLoanDurationDays() {
+        return loanDurationDays;
+    }
+
+    public void setLoanDurationDays(Integer loanDurationDays) {
+        this.loanDurationDays = loanDurationDays;
+    }
+
+    public Integer getMaxLoansAdult() {
+        return maxLoansAdult;
+    }
+
+    public void setMaxLoansAdult(Integer maxLoansAdult) {
+        this.maxLoansAdult = maxLoansAdult;
+    }
+
+    public Integer getMaxLoansChild() {
+        return maxLoansChild;
+    }
+
+    public void setMaxLoansChild(Integer maxLoansChild) {
+        this.maxLoansChild = maxLoansChild;
+    }
+
+    public Integer getMaxReservationsAdult() {
+        return maxReservationsAdult;
+    }
+
+    public void setMaxReservationsAdult(Integer maxReservationsAdult) {
+        this.maxReservationsAdult = maxReservationsAdult;
+    }
+
+    public Integer getMaxReservationsChild() {
+        return maxReservationsChild;
+    }
+
+    public void setMaxReservationsChild(Integer maxReservationsChild) {
+        this.maxReservationsChild = maxReservationsChild;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }

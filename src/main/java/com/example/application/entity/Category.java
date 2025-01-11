@@ -1,34 +1,34 @@
 package com.example.application.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-import java.util.Date;
-import java.util.Set;
+import java.time.Instant;
 
 @Entity
 @Table(name = "categories")
 public class Category {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(nullable = false)
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "name", nullable = false)
     private String name;
 
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "description", nullable = false)
     private String description;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at")
-    private Date createdAt;
+    private Instant createdAt;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "updated_at")
-    private Date updatedAt;
-
-    // Relations avec Item
-    @OneToMany(mappedBy = "category")
-    private Set<Item> items;
+    private Instant updatedAt;
 
     public Long getId() {
         return id;
@@ -54,39 +54,20 @@ public class Category {
         this.description = description;
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Date getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(Date updatedAt) {
+    public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
     }
 
-    public Set<Item> getItems() {
-        return items;
-    }
-
-    public void setItems(Set<Item> items) {
-        this.items = items;
-    }
-
-    public Category() {
-    }
-
-    public Category(Long id, String name, String description, Date createdAt, Date updatedAt, Set<Item> items) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.items = items;
-    }
 }

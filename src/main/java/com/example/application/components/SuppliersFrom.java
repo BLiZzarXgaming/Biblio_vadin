@@ -1,7 +1,8 @@
 package com.example.application.components;
 
+import com.example.application.entity.DTO.SupplierDto;
 import com.example.application.entity.Supplier;
-import com.example.application.service.implementation.SupplierServiceImpl;
+import com.example.application.service.implementation.SupplierServiceV2;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -9,14 +10,14 @@ import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Optional;
 
 public class SuppliersFrom extends HorizontalLayout {
 
-    private SupplierServiceImpl supplierService;
-    private ComboBox<Supplier> supplierComboBox;
+    private SupplierServiceV2 supplierService;
+    private ComboBox<SupplierDto> supplierComboBox;
     private Dialog addSupplierDialog;
     private TextField nameField;
     private TextField contactInfoField;
@@ -25,13 +26,13 @@ public class SuppliersFrom extends HorizontalLayout {
     private boolean disableNotification = false;
 
 
-    public SuppliersFrom(SupplierServiceImpl supplierService) {
+    public SuppliersFrom(SupplierServiceV2 supplierService) {
         this.supplierService = supplierService;
 
         // Liste déroulante des fournisseurs
         supplierComboBox = new ComboBox<>("Sélectionné le fournisseur");
         supplierComboBox.setItems(supplierService.findAll());
-        supplierComboBox.setItemLabelGenerator(Supplier::getName);
+        supplierComboBox.setItemLabelGenerator(SupplierDto::getName);
         add(supplierComboBox);
 
         // Bouton pour ouvrir la modal
@@ -64,21 +65,21 @@ public class SuppliersFrom extends HorizontalLayout {
             return;
         }
 
-        Supplier supplier = new Supplier();
-        supplier.setName(name);
-        supplier.setContactInfo(contactInfo);
-        int result = supplierService.save(supplier);
+        Optional<SupplierDto> supplier = Optional.of(new SupplierDto());
+        supplier.get().setName(name);
+        supplier.get().setContactInfo(contactInfo);
+        SupplierDto result = supplierService.save(supplier.orElse(null));
 
-        if (result == 0) {
+        if (result == null) {
             sendNotification("Le fournisseur existe déjà", "error", 5000);
             return;
         }
 
         sendNotification("Le fournisseur a été ajouté avec succès", "success", 5000);
 
-        supplier = supplierService.findFirstByName(name);
+        supplier = supplierService.findByName(name);
         supplierComboBox.setItems(supplierService.findAll());
-        supplierComboBox.setValue(supplier);
+        supplierComboBox.setValue(supplier.get());
         addSupplierDialog.close();
     }
 
@@ -87,22 +88,22 @@ public class SuppliersFrom extends HorizontalLayout {
         addSupplierButton.setVisible(!disable);
     }
 
-    public Supplier getSelectedSupplier() {
+    public SupplierDto getSelectedSupplier() {
         return supplierComboBox.getValue();
     }
 
-    public void setSelectedSupplier(Supplier supplier) {
+    public void setSelectedSupplier(SupplierDto supplier) {
         supplierComboBox.setValue(supplier);
     }
 
     public void setSupplierbyName(String name) {
-        Supplier supplier = supplierService.findFirstByName(name);
-        supplierComboBox.setValue(supplier);
+        Optional<SupplierDto> supplier = supplierService.findByName(name);
+        supplierComboBox.setValue(supplier.get());
     }
 
     public void setSupplierById(Long id) {
-        Supplier supplier = supplierService.findById(id);
-        supplierComboBox.setValue(supplier);
+        Optional<SupplierDto> supplier = supplierService.findById(id);
+        supplierComboBox.setValue(supplier.get());
     }
 
     public void setReadOnly(boolean readOnly) {

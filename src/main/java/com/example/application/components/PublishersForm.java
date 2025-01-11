@@ -1,7 +1,8 @@
 package com.example.application.components;
 
+import com.example.application.entity.DTO.PublisherDto;
 import com.example.application.entity.Publisher;
-import com.example.application.service.implementation.PublisherServiceImpl;
+import com.example.application.service.implementation.PublisherServiceV2;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -9,17 +10,17 @@ import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Optional;
 
 public class PublishersForm extends HorizontalLayout {
     // name
     //contact_info
     //id
 
-    private PublisherServiceImpl publisherService;
-    private ComboBox<Publisher> publisherComboBox;
+    private PublisherServiceV2 publisherService;
+    private ComboBox<PublisherDto> publisherComboBox;
     private Dialog addPublisherDialog;
     private TextField nameField;
     private TextField contactInfoField;
@@ -28,13 +29,13 @@ public class PublishersForm extends HorizontalLayout {
     private boolean disableNotification = false;
 
 
-    public PublishersForm(PublisherServiceImpl publisherService) {
+    public PublishersForm(PublisherServiceV2 publisherService) {
         this.publisherService = publisherService;
 
         // Liste déroulante des publishers
         publisherComboBox = new ComboBox<>("Sélectionné l'éditeur");
         publisherComboBox.setItems(publisherService.findAll());
-        publisherComboBox.setItemLabelGenerator(Publisher::getName);
+        publisherComboBox.setItemLabelGenerator(PublisherDto::getName);
         add(publisherComboBox);
 
         // Bouton pour ouvrir la modal
@@ -63,13 +64,13 @@ public class PublishersForm extends HorizontalLayout {
         addPublisherButton.setVisible(!disable);
     }
 
-    private void setSelectedPublisher(Publisher selectedPublisher) {
+    private void setSelectedPublisher(PublisherDto selectedPublisher) {
         publisherComboBox.setValue(selectedPublisher);
     }
 
     public void setSelectedPublisherById(Long id) {
-        Publisher publisher = publisherService.findById(id);
-        setSelectedPublisher(publisher);
+        Optional<PublisherDto> publisher = publisherService.findById(id);
+        setSelectedPublisher(publisher.orElse(null));
     }
 
     //TODO : mettre enum
@@ -112,27 +113,27 @@ public class PublishersForm extends HorizontalLayout {
             return;
         }
 
-        Publisher publisher = new Publisher();
-        publisher.setName(name);
-        publisher.setContactInfo(contactInfo);
-        int result = publisherService.save(publisher);
+        Optional<PublisherDto> publisher = Optional.of(new PublisherDto());
+        publisher.get().setName(name);
+        publisher.get().setContactInfo(contactInfo);
+        PublisherDto result = publisherService.save(publisher.orElse(null));
 
-        if (result == 0) {
+        if (result == null) {
             sendNotification("L'éditeur existe déjà", "error", 5000);
             return;
         }
 
         sendNotification("L'éditeur a été ajouté avec succès", "success", 5000);
 
-        publisher = publisherService.findFirstByName(name);
+        publisher = publisherService.findByName(name);
 
         // Implémentez la logique pour sauvegarder le nouveau publisher
         publisherComboBox.setItems(publisherService.findAll()); // Rafraîchissez la liste des publishers
-        setSelectedPublisher(publisher);
+        setSelectedPublisher(publisher.orElse(null));
         addPublisherDialog.close();
     }
 
-    public Publisher getSelectedPublisher() {
+    public PublisherDto getSelectedPublisher() {
         return publisherComboBox.getValue();
     }
 

@@ -1,18 +1,15 @@
 package com.example.application.views.myview;
 
 import com.example.application.entity.Availability;
-import com.example.application.service.implementation.AvailabilityServiceImpl;
+import com.example.application.entity.DTO.AvailabilityDto;
+import com.example.application.service.implementation.AvailabilityServiceV2;
 import com.example.application.views.MainLayout;
 import com.vaadin.componentfactory.Popup;
-import com.vaadin.flow.component.ClientCallable;
 import com.vaadin.flow.component.Composite;
-import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.listbox.ListBox;
-import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.dom.Style;
@@ -28,7 +25,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.vaadin.stefan.fullcalendar.Entry;
 import org.vaadin.stefan.fullcalendar.FullCalendar;
 import org.vaadin.stefan.fullcalendar.FullCalendarBuilder;
-import org.vaadin.stefan.fullcalendar.Timezone;
 
 import java.time.*;
 import java.time.format.TextStyle;
@@ -45,13 +41,13 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
     // TODO : voir comment récupérer les disponibilités depuis la base de données
 
     @Autowired
-    private final AvailabilityServiceImpl availabilityService;
+    private final AvailabilityServiceV2 availabilityService;
 
     private FullCalendar calendar;
 
     private Popup popup;
 
-    public HomeView(@Autowired AvailabilityServiceImpl userService) {
+    public HomeView(@Autowired AvailabilityServiceV2 userService) {
         this.availabilityService = userService;
         getContent().setWidth("100%");
         getContent().getStyle().set("flex-grow", "1");
@@ -101,10 +97,10 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
         // Récupérer les disponibilités confirmées depuis la base de données
         LocalDate currentDate = LocalDate.now(); // ZoneId.of("America/Montreal")
         LocalDate endOfMonth = currentDate.withDayOfMonth(currentDate.lengthOfMonth());
-        List<Availability> availabilities = availabilityService.findAvailabilitiesByStatusAndDateBetween("Confirmed", currentDate, endOfMonth );
+        List<AvailabilityDto> availabilities = availabilityService.findByStatusAndDateBetween("Confirmed", currentDate, endOfMonth );
 
         // Ajouter les disponibilités au calendrier
-        for (Availability availability : availabilities) {
+        for (AvailabilityDto availability : availabilities) {
             Entry entry = new Entry();
 
 
