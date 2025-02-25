@@ -20,7 +20,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import java.time.LocalDate;
 import java.util.Optional;
 
-public class MagazinesForm extends VerticalLayout {
+public class MagazinesForm extends VerticalLayout implements FormValidation {
 
     private MagazineServiceV2 magazinesService;
     private ItemServiceV2 itemService;
@@ -67,7 +67,8 @@ public class MagazinesForm extends VerticalLayout {
         MoisOption month = monthField.getValue();
         Integer year = yearField.getValue();
 
-        Optional<MagazineDto> magazine = magazinesService.findByIsniAndMonthAndYear(isni, month.getNumero(), year.toString());
+        Optional<MagazineDto> magazine = magazinesService.findByIsniAndMonthAndYear(isni, month.getNumero(),
+                year.toString());
         if (magazine.isPresent()) {
             fillFields(magazine.orElse(null));
             return magazine.orElse(null);
@@ -184,5 +185,9 @@ public class MagazinesForm extends VerticalLayout {
         this.disableNotification = disableNotification;
     }
 
+    public boolean validateForm() {
+        return isniField.getValue() != null && !isniField.getValue().isEmpty() && monthField.getValue() != null
+                && yearField.getValue() != null && publicationDateField.getValue() != null;
+    }
 
 }

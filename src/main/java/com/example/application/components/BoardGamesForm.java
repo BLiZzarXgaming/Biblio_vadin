@@ -15,7 +15,7 @@ import com.vaadin.flow.component.textfield.TextField;
 
 import java.util.Optional;
 
-public class BoardGamesForm extends VerticalLayout {
+public class BoardGamesForm extends VerticalLayout implements FormValidation {
     // number_of_pieces
     // recommended_age
     // game_rules
@@ -31,7 +31,7 @@ public class BoardGamesForm extends VerticalLayout {
     private ItemDto item;
 
     private Notification notification;
-    //private Long itemId;
+    // private Long itemId;
 
     private boolean disableNotification = false;
 
@@ -165,6 +165,10 @@ public class BoardGamesForm extends VerticalLayout {
 
     public void setDisableNotification(boolean disableNotification) {
         this.disableNotification = disableNotification;
+    }
+
+    public boolean validateForm() {
+        return gtinField.getValue() != null && !gtinField.getValue().isEmpty();
     }
 
 }

@@ -5,6 +5,7 @@ import com.example.application.identification_user.MyUserPrincipal;
 import com.example.application.views.myview.*;
 import com.example.application.views.myview.admin.AdminHomeView;
 import com.example.application.views.myview.benevole.BenevoleAjouterView;
+import com.example.application.views.myview.benevole.BenevoleEmpruntView;
 import com.example.application.views.myview.benevole.BenevoleHomeView;
 import com.example.application.views.myview.membre.testm1;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -89,7 +90,6 @@ public class MainLayout extends AppLayout {
 
     private SideNav createNavigationAnonyme(SideNav nav) {
 
-
         nav.addItem(new SideNavItem("Accueil", HomeView.class));
         nav.addItem(new SideNavItem("Catalogue", CatalogueView.class));
 
@@ -107,7 +107,9 @@ public class MainLayout extends AppLayout {
     private SideNav createNavigationBenevole(SideNav nav) {
 
         nav.addItem(new SideNavItem("Accueil", BenevoleHomeView.class));
+        nav.addItem(new SideNavItem("Catalogue", CatalogueView.class));
         nav.addItem(new SideNavItem("Ajout", BenevoleAjouterView.class));
+        nav.addItem(new SideNavItem("Emprunts", BenevoleEmpruntView.class));
 
         return nav;
     }
@@ -127,7 +129,6 @@ public class MainLayout extends AppLayout {
         Footer layout = new Footer();
         VerticalLayout footer = new VerticalLayout();
 
-
         if (securityService.getAuthenticatedUser() != null) {
 
             Div div = new Div();
@@ -141,8 +142,7 @@ public class MainLayout extends AppLayout {
             divNameUSer.setWidth("100%");
             divNameUSer.getStyle().set("text-align", "center");
 
-            Button logout = new Button("Se déconnecter", click ->
-                    securityService.logout());
+            Button logout = new Button("Se déconnecter", click -> securityService.logout());
             logout.setWidthFull();
 
             HtmlObject hr = new HtmlObject("hr");
@@ -150,11 +150,9 @@ public class MainLayout extends AppLayout {
             hr.getStyle().set("width", "100%");
             hr.getStyle().set("background-color", "black");
 
-            footer.add(hr,div, divNameUSer, logout);
+            footer.add(hr, div, divNameUSer, logout);
         } else {
-            Button login = new Button("Se connecter", click ->
-                    getUI().ifPresent(ui ->
-                            ui.navigate("login")));
+            Button login = new Button("Se connecter", click -> getUI().ifPresent(ui -> ui.navigate("login")));
 
             login.setWidthFull();
             footer.add(login);

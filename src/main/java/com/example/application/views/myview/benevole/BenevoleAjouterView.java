@@ -10,6 +10,8 @@ import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -18,7 +20,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
-
 
 @PageTitle("Ajouter des articles")
 @Route(value = "volunteer/add", layout = MainLayout.class)
@@ -49,6 +50,7 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
     private CategoryServiceV2 categoryService;
     private ItemServiceV2 itemService;
     private CopyServiceV2 copyService;
+    private DocumentAdditionService documentAdditionService;
 
     private BooksForm booksForm;
     private BoardGamesForm boardGamesForm;
@@ -62,14 +64,15 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
     private Button addAllButton;
     private VerticalLayout content;
 
-    public BenevoleAjouterView( PublisherServiceV2 publisherService,
-                                SupplierServiceV2 supplierService,
-                                BookServiceV2 bookService,
-                                BoardGameServiceV2 boardGameService,
-                                MagazineServiceV2 magazineService,
-                                CategoryServiceV2 categoryService,
-                                ItemServiceV2 itemService,
-                                CopyServiceV2 copyService) {
+    public BenevoleAjouterView(PublisherServiceV2 publisherService,
+            SupplierServiceV2 supplierService,
+            BookServiceV2 bookService,
+            BoardGameServiceV2 boardGameService,
+            MagazineServiceV2 magazineService,
+            CategoryServiceV2 categoryService,
+            ItemServiceV2 itemService,
+            CopyServiceV2 copyService,
+            DocumentAdditionService documentAdditionService) {
 
         this.publisherService = publisherService;
         this.supplierService = supplierService;
@@ -79,22 +82,21 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
         this.categoryService = categoryService;
         this.itemService = itemService;
         this.copyService = copyService;
-
+        this.documentAdditionService = documentAdditionService;
         getContent().setWidth("100%");
         getContent().setHeightFull();
 
-        //getContent().add( booksForm, boardGamesForm, magazinesForm, itemsForm, copiesForm);
+        // getContent().add( booksForm, boardGamesForm, magazinesForm, itemsForm,
+        // copiesForm);
 
         typeDocComboBox = new ComboBox<>("Type de document");
 
         content = new VerticalLayout();
 
-
         typeDocComboBox.setItems(
                 new DocumentType("livre", "book"),
                 new DocumentType("magazine", "magazine"),
-                new DocumentType("jeu", "board_game")
-        );
+                new DocumentType("jeu", "board_game"));
 
         typeDocComboBox.setItemLabelGenerator(DocumentType::getDisplayName);
 
@@ -107,6 +109,14 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
                     booksForm = new BooksForm(bookService, itemService);
 
                     searchButton.addClickListener(e -> {
+                        if (!booksForm.validateForm()) {
+                            createNotification("Veuillez remplir le ISBN", "error");
+                            return;
+                        }
+
+                        content.removeAll();
+                        content.add(booksForm, searchButton);
+
                         itemsForm = new ItemsForm(itemService, categoryService, publisherService, supplierService);
                         copiesForm = new CopiesForm(copyService);
 
@@ -116,13 +126,11 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
                             content.add(itemsForm, copiesForm, addAllButton);
                             itemsForm.setItemById(booktemp.getId());
                             copiesForm.setItem_id(booktemp.getId());
-                        }
-                        else {
+                        } else {
                             content.add(itemsForm, copiesForm, addAllButton);
                         }
                         itemsForm.setType(TypeDoc.BOOK.getValue());
                     });
-
 
                     content.add(booksForm, searchButton);
                     break;
@@ -131,6 +139,14 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
                     magazinesForm = new MagazinesForm(magazineService, itemService);
 
                     searchButton.addClickListener(e -> {
+                        if (!magazinesForm.validateForm()) {
+                            createNotification("Veuillez remplir le ISNI, le mois et l'année", "error");
+                            return;
+                        }
+
+                        content.removeAll();
+                        content.add(magazinesForm, searchButton);
+
                         itemsForm = new ItemsForm(itemService, categoryService, publisherService, supplierService);
                         copiesForm = new CopiesForm(copyService);
 
@@ -139,13 +155,11 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
                             content.add(itemsForm, copiesForm, addAllButton);
                             itemsForm.setItemById(magazinetemp.getId());
                             copiesForm.setItem_id(magazinetemp.getId());
-                        }
-                        else {
+                        } else {
                             content.add(itemsForm, copiesForm, addAllButton);
                         }
                         itemsForm.setType(TypeDoc.MAGAZINE.getValue());
                     });
-
 
                     content.add(magazinesForm, searchButton);
                     break;
@@ -154,6 +168,14 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
                     boardGamesForm = new BoardGamesForm(boardGameService, itemService);
 
                     searchButton.addClickListener(e -> {
+                        if (!boardGamesForm.validateForm()) {
+                            createNotification("Veuillez remplir le GTIN", "error");
+                            return;
+                        }
+
+                        content.removeAll();
+                        content.add(boardGamesForm, searchButton);
+
                         itemsForm = new ItemsForm(itemService, categoryService, publisherService, supplierService);
                         copiesForm = new CopiesForm(copyService);
 
@@ -163,13 +185,11 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
                             content.add(itemsForm, copiesForm, addAllButton);
                             itemsForm.setItemById(boardGametemp.getId());
                             copiesForm.setItem_id(boardGametemp.getId());
-                        }
-                        else {
+                        } else {
                             content.add(itemsForm, copiesForm, addAllButton);
                         }
                         itemsForm.setType(TypeDoc.BOARDGAME.getValue());
                     });
-
 
                     content.add(boardGamesForm, searchButton);
                     break;
@@ -184,46 +204,52 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
         getContent().add(typeDocComboBox, content);
     }
 
-
     // TODO: ajouter des check pour les formulaires
 
     private void addAll() {
-
-        Long idItem = itemsForm.getItem().getId();
         ItemDto item = itemsForm.getItem();
-
         String type = typeDocComboBox.getValue().getReturnValue();
-        ItemDto resultItem = itemService.save(item);
 
-        // Todo:
-        // ne pas save si ça existe déjà
-        // save si ça existe pas
-        switch (type) {
-            case "book":
-                //booksForm.setbookItemid(idItem);
-                //booksForm.saveBook(item);
-
-                BookDto book = booksForm.getBookInfo();
-                book.setItem(resultItem);
-                bookService.insertBook(book);
-                booksForm.setbookItemid(resultItem.getId());
-
-                break;
-            case "magazine":
-                magazinesForm.setMagazineItemId(idItem);
-                //magazinesForm.saveMagazine();
-                break;
-            case "board_game":
-                boardGamesForm.setBoardGameItemId(idItem);
-                //boardGamesForm.saveBoardGame();
-                break;
-            default:
-                throw new IllegalStateException("Unexpected value: " + type);
+        if (item.getId() != null) {
+            // Si le document existe déjà, ajouter uniquement les copies
+            documentAdditionService.addCopiesToExistingDocument(item, copiesForm.getCopies());
+            createNotification("Copies ajoutées avec succès au document existant", "success");
+            return;
         }
 
-        System.out.println("livre OK");
+        try {
+            switch (type) {
+                case "book":
+                    BookDto book = booksForm.getBookInfo();
+                    ItemDto resultItem = documentAdditionService.addBook(item, book, copiesForm.getCopies());
+                    booksForm.setbookItemid(resultItem.getId());
+                    break;
+                case "magazine":
+                    MagazineDto magazine = magazinesForm.getMagazineInfo();
+                    documentAdditionService.addMagazine(item, magazine, copiesForm.getCopies());
+                    break;
+                case "board_game":
+                    BoardGameDto boardGame = boardGamesForm.getBoardGame();
+                    documentAdditionService.addBoardGame(item, boardGame, copiesForm.getCopies());
+                    break;
+                default:
+                    throw new IllegalStateException("Type de document non supporté: " + type);
+            }
 
-        copiesForm.setItem(booksForm.getBookInfo().getItem());
-        copiesForm.saveAllCopies();
+            // Notification de succès
+            createNotification("Document ajouté avec succès", "success");
+
+        } catch (Exception e) {
+            // Gestion d'erreur
+            createNotification("Erreur lors de l'ajout: " + e.getMessage(), "error");
+        }
+    }
+
+    private void createNotification(String message, String type) {
+        Notification notification = Notification.show(message);
+        notification.addThemeVariants(
+                "error".equals(type)
+                        ? NotificationVariant.LUMO_ERROR
+                        : NotificationVariant.LUMO_SUCCESS);
     }
 }

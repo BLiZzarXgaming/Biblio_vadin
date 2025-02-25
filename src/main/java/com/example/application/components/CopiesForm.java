@@ -17,7 +17,6 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,11 +39,11 @@ public class CopiesForm extends VerticalLayout {
             return value;
         }
     }
-    //item_id
-    //status
-    //acquisition_date
-    //price
-    //id
+    // item_id
+    // status
+    // acquisition_date
+    // price
+    // id
 
     private CopyServiceV2 copyService;
 
@@ -67,7 +66,6 @@ public class CopiesForm extends VerticalLayout {
 
     private Long idTempscount = 1L;
     private ItemDto item;
-
 
     public CopiesForm(CopyServiceV2 copyService) {
         this.copyService = copyService;
@@ -204,6 +202,10 @@ public class CopiesForm extends VerticalLayout {
 
     public void setDisableNotification(boolean disableNotification) {
         this.disableNotification = disableNotification;
+    }
+
+    public List<CopyDto> getCopies() {
+        return copiesDataGrid;
     }
 
 }

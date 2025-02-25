@@ -18,7 +18,7 @@ import jakarta.transaction.Transactional;
 import java.time.LocalDate;
 import java.util.Optional;
 
-public class BooksForm extends VerticalLayout {
+public class BooksForm extends VerticalLayout implements FormValidation {
 
     private BookServiceV2 bookService;
     private ItemServiceV2 itemService;
@@ -65,7 +65,6 @@ public class BooksForm extends VerticalLayout {
         }
     }
 
-
     public void saveBook(ItemDto itemtemp) {
         String isbn = isbnField.getValue();
         String author = authorField.getValue();
@@ -89,7 +88,7 @@ public class BooksForm extends VerticalLayout {
             sendNotification("Erreur lors de l'ajout du livre", "error", 5000);
             System.out.println(e.getMessage());
         }
-         // bookService.save(book);
+        // bookService.save(book);
 
         if (result == null) {
             sendNotification("Le livre existe déjà", "error", 5000);
@@ -129,7 +128,7 @@ public class BooksForm extends VerticalLayout {
         isbnField.setValue(book.getIsbn());
         authorField.setValue(book.getAuthor());
         publicationDateField.setValue(book.getPublicationDate());
-        item = book.getItem(); //itemService.findById(book.getId()).orElse(null);
+        item = book.getItem(); // itemService.findById(book.getId()).orElse(null);
 
         setFieldsReadOnly(true);
     }
@@ -176,6 +175,10 @@ public class BooksForm extends VerticalLayout {
         if (!disableNotification || type.equals("error")) {
             notification.open();
         }
+    }
+
+    public boolean validateForm() {
+        return isbnField.getValue() != null && !isbnField.getValue().isEmpty();
     }
 
     public void setDisableNotification(boolean disableNotification) {
