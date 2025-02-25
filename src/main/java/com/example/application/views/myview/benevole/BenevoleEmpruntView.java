@@ -76,6 +76,10 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
     private int memberLoanLimit = 0;
     private int activeLoanCount = 0;
 
+    // pour les reset
+    private Button newMemberButton;
+    private String oldUsername = "";
+
     public BenevoleEmpruntView(CopyServiceV2 copyService,
             UserServiceV2 userService,
             LoanServiceV2 loanService,
@@ -113,6 +117,67 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         loanProcessLayout.add(resultLayout);
 
         getContent().add(loanProcessLayout);
+
+        createNewMemberButton();
+
+    }
+
+    private void createNewMemberButton() {
+        newMemberButton = new Button("Nouveau membre");
+        newMemberButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        newMemberButton.setWidth("200px");
+        newMemberButton.addClickListener(e -> resetView());
+        newMemberButton.setVisible(false); // Initialement caché
+
+        // Ajouter une marge pour le séparer du contenu au-dessus
+        newMemberButton.getStyle()
+                .set("margin-top", "30px")
+                .set("margin-bottom", "20px");
+
+        // Ajouter le bouton au bas de la vue principale
+        getContent().add(newMemberButton);
+    }
+
+    private void resetView() {
+        // Réinitialiser le champ du nom d'utilisateur
+        usernameField.clear();
+
+        // Cacher la section d'emprunt
+        loanProcessLayout.setVisible(false);
+
+        // Cacher la grille des emprunts actifs
+        activeLoansGrid.setVisible(false);
+
+        // Réinitialiser les informations de limite d'emprunt
+        loanLimitInfo.setText("");
+
+        // Effacer les données de recherche
+        if (copyIdField != null)
+            copyIdField.clear();
+        if (isbnField != null)
+            isbnField.clear();
+        if (gtinField != null)
+            gtinField.clear();
+        if (isniField != null)
+            isniField.clear();
+        if (monthField != null)
+            monthField.clear();
+        if (yearField != null)
+            yearField.clear();
+
+        // Effacer la zone de résultats
+        resultLayout.removeAll();
+
+        // Réinitialiser les variables de données
+        selectedCopy = null;
+        selectedMember = null;
+        memberLoanLimit = 0;
+        activeLoanCount = 0;
+
+        // Ajouter dans la méthode existante
+        if (newMemberButton != null) {
+            newMemberButton.setVisible(false);
+        }
     }
 
     private void createMemberSection() {
@@ -345,6 +410,12 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
     }
 
     private void checkMember() {
+        if (loanProcessLayout.isVisible()) {
+            oldUsername = usernameField.getValue();
+            resetView();
+            usernameField.setValue(oldUsername);
+        }
+
         if (usernameField.isEmpty()) {
             showNotification("Veuillez saisir un nom d'utilisateur", "error");
             return;
@@ -386,6 +457,10 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
 
         // Afficher la section de recherche et création d'emprunt
         loanProcessLayout.setVisible(true);
+
+        if (newMemberButton != null) {
+            newMemberButton.setVisible(true);
+        }
     }
 
     private void displayMemberInfo() {
