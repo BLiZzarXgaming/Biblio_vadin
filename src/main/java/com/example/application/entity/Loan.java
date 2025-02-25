@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @Table(name = "loans")
 public class Loan {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 

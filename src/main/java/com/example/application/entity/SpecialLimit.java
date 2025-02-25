@@ -10,6 +10,7 @@ import java.time.Instant;
 @Table(name = "special_limits")
 public class SpecialLimit {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 

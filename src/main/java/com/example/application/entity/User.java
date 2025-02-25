@@ -11,6 +11,7 @@ import java.util.Objects;
 @Table(name = "users")
 public class User {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -208,7 +209,9 @@ public class User {
     public User() {
     }
 
-    public User(Long id, String firstName, String lastName, String username, String email, Instant emailVerifiedAt, String status, String password, String phoneNumber, String cellNumber, Boolean isChild, Role role, Instant dateOfBirth) {
+    public User(Long id, String firstName, String lastName, String username, String email, Instant emailVerifiedAt,
+            String status, String password, String phoneNumber, String cellNumber, Boolean isChild, Role role,
+            Instant dateOfBirth) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -226,14 +229,29 @@ public class User {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         User user = (User) o;
-        return Objects.equals(getId(), user.getId()) && Objects.equals(getFirstName(), user.getFirstName()) && Objects.equals(getLastName(), user.getLastName()) && Objects.equals(getUsername(), user.getUsername()) && Objects.equals(getEmail(), user.getEmail()) && Objects.equals(getEmailVerifiedAt(), user.getEmailVerifiedAt()) && Objects.equals(getStatus(), user.getStatus()) && Objects.equals(getPassword(), user.getPassword()) && Objects.equals(getPhoneNumber(), user.getPhoneNumber()) && Objects.equals(getCellNumber(), user.getCellNumber()) && Objects.equals(getIsChild(), user.getIsChild()) && Objects.equals(getRole(), user.getRole()) && Objects.equals(getDateOfBirth(), user.getDateOfBirth()) && Objects.equals(getRememberToken(), user.getRememberToken()) && Objects.equals(getCreatedAt(), user.getCreatedAt()) && Objects.equals(getUpdatedAt(), user.getUpdatedAt());
+        return Objects.equals(getId(), user.getId()) && Objects.equals(getFirstName(), user.getFirstName())
+                && Objects.equals(getLastName(), user.getLastName())
+                && Objects.equals(getUsername(), user.getUsername()) && Objects.equals(getEmail(), user.getEmail())
+                && Objects.equals(getEmailVerifiedAt(), user.getEmailVerifiedAt())
+                && Objects.equals(getStatus(), user.getStatus()) && Objects.equals(getPassword(), user.getPassword())
+                && Objects.equals(getPhoneNumber(), user.getPhoneNumber())
+                && Objects.equals(getCellNumber(), user.getCellNumber())
+                && Objects.equals(getIsChild(), user.getIsChild()) && Objects.equals(getRole(), user.getRole())
+                && Objects.equals(getDateOfBirth(), user.getDateOfBirth())
+                && Objects.equals(getRememberToken(), user.getRememberToken())
+                && Objects.equals(getCreatedAt(), user.getCreatedAt())
+                && Objects.equals(getUpdatedAt(), user.getUpdatedAt());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getFirstName(), getLastName(), getUsername(), getEmail(), getEmailVerifiedAt(), getStatus(), getPassword(), getPhoneNumber(), getCellNumber(), getIsChild(), getRole(), getDateOfBirth(), getRememberToken(), getCreatedAt(), getUpdatedAt());
+        return Objects.hash(getId(), getFirstName(), getLastName(), getUsername(), getEmail(), getEmailVerifiedAt(),
+                getStatus(), getPassword(), getPhoneNumber(), getCellNumber(), getIsChild(), getRole(),
+                getDateOfBirth(), getRememberToken(), getCreatedAt(), getUpdatedAt());
     }
 }

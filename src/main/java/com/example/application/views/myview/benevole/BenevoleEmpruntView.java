@@ -1,12 +1,12 @@
 package com.example.application.views.myview.benevole;
 
-import com.example.application.entity.Copy;
 import com.example.application.entity.DTO.CopyDto;
 import com.example.application.entity.DTO.LoanDto;
 import com.example.application.entity.DTO.LoanSettingDto;
 import com.example.application.entity.DTO.UserDto;
+import com.example.application.entity.SpecialLimit;
+import com.example.application.entity.User;
 import com.example.application.objectcustom.MoisOption;
-import com.example.application.entity.Loan;
 import com.example.application.service.implementation.*;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Composite;
@@ -14,7 +14,10 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -28,6 +31,7 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,20 +49,32 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
     private final LoanSettingServiceV2 loanSettingService;
     private final SpecialLimitService specialLimitService;
 
+    // Section membre
+    private TextField usernameField;
+    private Button checkMemberButton;
+    private VerticalLayout memberInfoLayout;
+    private Grid<LoanDto> activeLoansGrid;
+    private Span loanLimitInfo;
+
+    // Section recherche et emprunt
+    private VerticalLayout loanProcessLayout;
     private TextField copyIdField;
     private TextField isbnField;
     private TextField gtinField;
     private TextField isniField;
     private ComboBox<MoisOption> monthField;
     private IntegerField yearField;
-    private TextField usernameField;
-
     private VerticalLayout searchMethodLayout;
     private VerticalLayout resultLayout;
+    private Tabs searchTabs;
+    private VerticalLayout copySearchLayout;
+    private VerticalLayout documentSearchLayout;
 
+    // Données de travail
     private CopyDto selectedCopy;
     private UserDto selectedMember;
     private int memberLoanLimit = 0;
+    private int activeLoanCount = 0;
 
     public BenevoleEmpruntView(CopyServiceV2 copyService,
             UserServiceV2 userService,
@@ -76,99 +92,349 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         this.boardGameService = boardGameService;
         this.loanSettingService = loanSettingService;
         this.specialLimitService = specialLimitService;
+
         getContent().setWidth("100%");
         getContent().setHeightFull();
 
         H2 title = new H2("Gestion des emprunts");
         getContent().add(title);
 
-        createSearchTabs();
+        // Section identification du membre
         createMemberSection();
 
+        // Section recherche et emprunt (initialement cachée)
+        loanProcessLayout = new VerticalLayout();
+        loanProcessLayout.setVisible(false);
+
+        // Création des composants de recherche
+        createSearchSection();
+
         resultLayout = new VerticalLayout();
-        getContent().add(resultLayout);
+        loanProcessLayout.add(resultLayout);
+
+        getContent().add(loanProcessLayout);
     }
 
-    private void createSearchTabs() {
-        Tab copyTab = new Tab("Recherche par ID de copie");
-        Tab documentTab = new Tab("Recherche par document");
+    private void createMemberSection() {
+        memberInfoLayout = new VerticalLayout();
+        memberInfoLayout.setPadding(true);
+        memberInfoLayout.setSpacing(true);
 
-        Tabs tabs = new Tabs(copyTab, documentTab);
+        FormLayout memberForm = new FormLayout();
+        usernameField = new TextField("Nom d'utilisateur du membre");
 
+        checkMemberButton = new Button("Vérifier membre");
+        checkMemberButton.addClickListener(e -> checkMember());
+
+        memberForm.add(usernameField, checkMemberButton);
+
+        memberInfoLayout.add(new H3("Identification du membre"), memberForm);
+        getContent().add(memberInfoLayout);
+
+        // Grille des emprunts actifs (initialement cachée)
+        activeLoansGrid = new Grid<>();
+        activeLoansGrid.addColumn(loan -> loan.getCopy().getItem().getTitle()).setHeader("Titre");
+        activeLoansGrid.addColumn(loan -> {
+            String type = loan.getCopy().getItem().getType();
+            return switch (type) {
+                case "book" -> "Livre";
+                case "magazine" -> "Revue";
+                case "board_game" -> "Jeu";
+                default -> type;
+            };
+        }).setHeader("Type");
+        activeLoansGrid.addColumn(loan -> loan.getLoanDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                .setHeader("Date d'emprunt");
+        activeLoansGrid.addColumn(loan -> loan.getReturnDueDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                .setHeader("Date de retour prévue");
+        activeLoansGrid.addComponentColumn(loan -> {
+            Button cancelButton = new Button("Annuler", click -> cancelLoan(loan));
+            cancelButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
+            return cancelButton;
+        }).setHeader("Actions");
+
+        activeLoansGrid.setVisible(false);
+        activeLoansGrid.setHeight("250px");
+
+        // Information sur les limites d'emprunt
+        loanLimitInfo = new Span();
+        loanLimitInfo.getStyle().set("font-weight", "bold");
+        loanLimitInfo.getStyle().set("margin-top", "10px");
+
+        memberInfoLayout.add(new H3("Emprunts actifs"), activeLoansGrid, loanLimitInfo);
+    }
+
+    private void createSearchSection() {
+        // En-tête de la section
+        H3 searchTitle = new H3("Rechercher un exemplaire");
+        Span helpText = new Span("Deux méthodes sont disponibles pour trouver un exemplaire à emprunter");
+
+        VerticalLayout headerLayout = new VerticalLayout(searchTitle, helpText);
+        headerLayout.setSpacing(false);
+        headerLayout.setPadding(false);
+
+        // Onglets de recherche
+        Tab copyTab = new Tab("Recherche par ID/code-barre");
+        Tab documentTab = new Tab("Recherche par identifiants uniques");
+        searchTabs = new Tabs(copyTab, documentTab);
+        searchTabs.setWidthFull();
+
+        // Layouts pour les deux types de recherche
         searchMethodLayout = new VerticalLayout();
         searchMethodLayout.setSpacing(true);
         searchMethodLayout.setPadding(true);
 
-        tabs.addSelectedChangeListener(event -> {
-            searchMethodLayout.removeAll();
+        // Préparation des deux modes de recherche
+        copySearchLayout = new VerticalLayout();
+        documentSearchLayout = new VerticalLayout();
+
+        // Initialisation des deux modes
+        setupCopySearchLayout();
+        setupDocumentSearchLayout();
+
+        // Par défaut, montrer la recherche par ID
+        copySearchLayout.setVisible(true);
+        documentSearchLayout.setVisible(false);
+        searchMethodLayout.add(copySearchLayout, documentSearchLayout);
+
+        // Listener des onglets
+        searchTabs.addSelectedChangeListener(event -> {
             if (event.getSelectedTab().equals(copyTab)) {
-                createCopySearchForm();
+                copySearchLayout.setVisible(true);
+                documentSearchLayout.setVisible(false);
             } else {
-                createDocumentSearchForm();
+                copySearchLayout.setVisible(false);
+                documentSearchLayout.setVisible(true);
             }
         });
 
-        // Par défaut, afficher la recherche par ID
-        createCopySearchForm();
-
-        getContent().add(tabs, searchMethodLayout);
+        loanProcessLayout.add(headerLayout, searchTabs, searchMethodLayout);
     }
 
-    private void createCopySearchForm() {
-        FormLayout formLayout = new FormLayout();
+    private void setupCopySearchLayout() {
+        Span helpText = new Span(
+                "Utilisez cette option si vous avez l'ID de l'exemplaire ou si l'exemplaire possède un code-barre");
+        helpText.getStyle().set("color", "var(--lumo-secondary-text-color)");
 
-        copyIdField = new TextField("ID de la copie");
+        FormLayout formLayout = new FormLayout();
+        copyIdField = new TextField("ID de la copie / Code-barre");
+        copyIdField.setPlaceholder("Ex: 1001");
 
         Button searchButton = new Button("Rechercher");
         searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         searchButton.addClickListener(e -> searchByCopyId());
 
+        // Permettre la recherche avec la touche Entrée pour le scanning
+        copyIdField.addKeyPressListener(e -> {
+            if (e.getKey().equals("Enter")) {
+                searchByCopyId();
+            }
+        });
+
         formLayout.add(copyIdField, searchButton);
-        searchMethodLayout.add(formLayout);
+        copySearchLayout.add(helpText, formLayout);
     }
 
-    private void createDocumentSearchForm() {
+    private void setupDocumentSearchLayout() {
+        Span helpText = new Span(
+                "Utilisez cette option pour trouver un exemplaire disponible en recherchant par les identifiants du document");
+        helpText.getStyle().set("color", "var(--lumo-secondary-text-color)");
+
+        // Onglets pour les types de documents
+        Tab bookTab = new Tab("Livre (ISBN)");
+        Tab gameTab = new Tab("Jeu (GTIN)");
+        Tab magazineTab = new Tab("Revue (ISNI)");
+
+        Tabs documentTabs = new Tabs(bookTab, gameTab, magazineTab);
+        documentTabs.setWidthFull();
+
+        // Container pour les formulaires spécifiques
+        VerticalLayout formContainer = new VerticalLayout();
+        formContainer.setPadding(true);
+        formContainer.setSpacing(true);
+
+        // Ajouter tout au layout de recherche par document
+        documentSearchLayout.add(helpText, documentTabs, formContainer);
+
+        // Afficher le bon formulaire selon l'onglet
+        documentTabs.addSelectedChangeListener(event -> {
+            formContainer.removeAll();
+            if (event.getSelectedTab().equals(bookTab)) {
+                createBookSearchForm(formContainer);
+            } else if (event.getSelectedTab().equals(gameTab)) {
+                createGameSearchForm(formContainer);
+            } else if (event.getSelectedTab().equals(magazineTab)) {
+                createMagazineSearchForm(formContainer);
+            }
+        });
+
+        // Par défaut, afficher la recherche de livre
+        createBookSearchForm(formContainer);
+    }
+
+    private void createBookSearchForm(VerticalLayout container) {
         FormLayout formLayout = new FormLayout();
 
-        isbnField = new TextField("ISBN (Livre)");
-        gtinField = new TextField("GTIN (Jeu)");
-        isniField = new TextField("ISNI (Magazine)");
-        monthField = new ComboBox<>("Mois (Magazine)");
-        monthField.setItems(MoisOption.getListeMois());
-        monthField.setItemLabelGenerator(MoisOption::getNom);
-        yearField = new IntegerField("Année (Magazine)");
-        yearField.setMin(1900);
-        yearField.setMax(LocalDate.now().getYear());
+        isbnField = new TextField("ISBN");
+        isbnField.setPlaceholder("Ex: 9780123456789");
+        isbnField.setHelperText("Entrez le numéro ISBN du livre");
 
         Button searchBookButton = new Button("Rechercher livre");
+        searchBookButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         searchBookButton.addClickListener(e -> searchBookByIsbn());
 
-        Button searchGameButton = new Button("Rechercher jeu");
-        searchGameButton.addClickListener(e -> searchGameByGtin());
+        // Permettre la recherche avec la touche Entrée
+        isbnField.addKeyPressListener(e -> {
+            if (e.getKey().equals("Enter")) {
+                searchBookByIsbn();
+            }
+        });
 
-        Button searchMagazineButton = new Button("Rechercher magazine");
-        searchMagazineButton.addClickListener(e -> searchMagazineByIsni());
-
-        formLayout.add(isbnField, searchBookButton, gtinField, searchGameButton);
-
-        // Ajout des champs spécifiques pour le magazine dans une sous-section
-        HorizontalLayout magazineLayout = new HorizontalLayout(isniField, monthField, yearField);
-        magazineLayout.setWidthFull();
-        formLayout.add(magazineLayout, searchMagazineButton);
-
-        searchMethodLayout.add(formLayout);
+        formLayout.add(isbnField, searchBookButton);
+        container.add(formLayout);
     }
 
-    private void createMemberSection() {
-        FormLayout memberForm = new FormLayout();
+    private void createGameSearchForm(VerticalLayout container) {
+        FormLayout formLayout = new FormLayout();
 
-        usernameField = new TextField("Nom d'utilisateur du membre");
+        gtinField = new TextField("GTIN");
+        gtinField.setPlaceholder("Ex: 1234567890123");
+        gtinField.setHelperText("Entrez le numéro GTIN du jeu de société");
 
-        Button checkMemberButton = new Button("Vérifier membre");
-        checkMemberButton.addClickListener(e -> checkMember());
+        Button searchGameButton = new Button("Rechercher jeu");
+        searchGameButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        searchGameButton.addClickListener(e -> searchGameByGtin());
 
-        memberForm.add(usernameField, checkMemberButton);
-        getContent().add(memberForm);
+        // Permettre la recherche avec la touche Entrée
+        gtinField.addKeyPressListener(e -> {
+            if (e.getKey().equals("Enter")) {
+                searchGameByGtin();
+            }
+        });
+
+        formLayout.add(gtinField, searchGameButton);
+        container.add(formLayout);
+    }
+
+    private void createMagazineSearchForm(VerticalLayout container) {
+        FormLayout formLayout = new FormLayout();
+
+        isniField = new TextField("ISNI");
+        isniField.setPlaceholder("Ex: 1234-5678");
+        isniField.setHelperText("Identifiant international normalisé");
+
+        monthField = new ComboBox<>("Mois");
+        monthField.setItems(MoisOption.getListeMois());
+        monthField.setItemLabelGenerator(MoisOption::getNom);
+
+        yearField = new IntegerField("Année");
+        yearField.setMin(1900);
+        yearField.setMax(LocalDate.now().getYear());
+        yearField.setHelperText("Année de publication");
+
+        Button searchMagazineButton = new Button("Rechercher magazine");
+        searchMagazineButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        searchMagazineButton.addClickListener(e -> searchMagazineByIsni());
+
+        formLayout.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2));
+
+        formLayout.add(isniField, yearField, monthField);
+        container.add(formLayout, searchMagazineButton);
+    }
+
+    private void checkMember() {
+        if (usernameField.isEmpty()) {
+            showNotification("Veuillez saisir un nom d'utilisateur", "error");
+            return;
+        }
+
+        String username = usernameField.getValue();
+        Optional<UserDto> user = userService.findByUsername(username);
+
+        if (user.isEmpty()) {
+            showNotification("Membre non trouvé", "error");
+            selectedMember = null;
+            loanProcessLayout.setVisible(false);
+            activeLoansGrid.setVisible(false);
+            return;
+        }
+
+        selectedMember = user.get();
+
+        // Vérifier si c'est un membre (non bénévole, non admin)
+        if (!"MEMBRE".equals(selectedMember.getRole().getName().toUpperCase())) {
+            showNotification("L'utilisateur n'est pas un membre et ne peut pas emprunter", "error");
+            selectedMember = null;
+            loanProcessLayout.setVisible(false);
+            activeLoansGrid.setVisible(false);
+            return;
+        }
+
+        // Vérifier si le membre est actif
+        if (!"active".equals(selectedMember.getStatus())) {
+            showNotification("Le compte de ce membre n'est pas actif", "error");
+            selectedMember = null;
+            loanProcessLayout.setVisible(false);
+            activeLoansGrid.setVisible(false);
+            return;
+        }
+
+        // Afficher les informations du membre
+        displayMemberInfo();
+
+        // Afficher la section de recherche et création d'emprunt
+        loanProcessLayout.setVisible(true);
+    }
+
+    private void displayMemberInfo() {
+        // Récupérer les emprunts actifs du membre
+        List<LoanDto> activeLoans = loanService.findByMember(selectedMember.getId()).stream()
+                .filter(loan -> "borrowed".equals(loan.getStatus()))
+                .toList();
+
+        activeLoanCount = activeLoans.size();
+
+        // Récupérer les limites d'emprunt par défaut
+        Optional<LoanSettingDto> settings = loanSettingService.findById(1L);
+
+        if (settings.isEmpty()) {
+            showNotification("Paramètres d'emprunt non trouvés dans le système", "error");
+            return;
+        }
+
+        // Définir la limite par défaut basée sur le type de membre (enfant ou adulte)
+        int defaultLimit = selectedMember.getIsChild() ? settings.get().getMaxLoansChild()
+                : settings.get().getMaxLoansAdult();
+        memberLoanLimit = defaultLimit;
+
+        // Vérifier s'il existe une limite spéciale pour ce membre
+        try {
+            User user = new User();
+            user.setId(selectedMember.getId());
+
+            Optional<SpecialLimit> specialLimit = specialLimitService.findFirstByUserOrderByCreatedAtDesc(user);
+            if (specialLimit.isPresent() && "active".equals(specialLimit.get().getStatus())) {
+                memberLoanLimit = specialLimit.get().getMaxLoans();
+            }
+        } catch (Exception e) {
+            // En cas d'erreur, on continue avec la limite par défaut
+            System.err.println("Erreur lors de la récupération des limites spéciales: " + e.getMessage());
+        }
+
+        // Mettre à jour l'info sur les limites
+        loanLimitInfo.setText("Emprunts actifs: " + activeLoanCount + " / " + memberLoanLimit);
+        if (activeLoanCount >= memberLoanLimit) {
+            loanLimitInfo.getElement().getStyle().set("color", "red");
+            showNotification("Ce membre a atteint sa limite d'emprunts", "warning");
+        } else {
+            loanLimitInfo.getElement().getStyle().set("color", "green");
+        }
+
+        // Charger les emprunts actifs dans la grille
+        activeLoansGrid.setItems(activeLoans);
+        activeLoansGrid.setVisible(true);
     }
 
     private void searchByCopyId() {
@@ -231,7 +497,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         }
 
         String isni = isniField.getValue();
-        String month = monthField.getValue().getNom();
+        String month = monthField.getValue().getNumero();
         String year = yearField.getValue().toString();
 
         magazineService.findByIsniAndMonthAndYear(isni, month, year).ifPresentOrElse(
@@ -247,8 +513,17 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
 
         if (copies.isEmpty()) {
             showNotification("Aucune copie trouvée pour ce document", "error");
+            // Afficher un message clair dans l'interface
+            H3 noResults = new H3("Aucun exemplaire trouvé");
+            noResults.getStyle().set("color", "var(--lumo-error-color)");
+            resultLayout.add(noResults);
             return;
         }
+
+        // Afficher le titre du document
+        String documentTitle = copies.get(0).getItem().getTitle();
+        H3 titleHeader = new H3("Document: " + documentTitle);
+        resultLayout.add(titleHeader);
 
         // Filtrer pour obtenir les copies disponibles
         List<CopyDto> availableCopies = copies.stream()
@@ -257,7 +532,27 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
 
         if (availableCopies.isEmpty()) {
             showNotification("Aucune copie disponible pour ce document", "warning");
-            resultLayout.add(new H2("Toutes les copies sont indisponibles"));
+
+            // Afficher un message explicatif et le nombre total de copies
+            Span statusMessage = new Span("Ce document possède " + copies.size() +
+                    " exemplaire(s), mais aucun n'est disponible actuellement.");
+            statusMessage.getStyle().set("color", "var(--lumo-warning-color)");
+
+            // Ajouter un récapitulatif des statuts
+            long borrowedCount = copies.stream().filter(c -> "borrowed".equals(c.getStatus())).count();
+            long reservedCount = copies.stream().filter(c -> "reserved".equals(c.getStatus())).count();
+
+            StringBuilder details = new StringBuilder();
+            if (borrowedCount > 0) {
+                details.append(borrowedCount).append(" exemplaire(s) emprunté(s). ");
+            }
+            if (reservedCount > 0) {
+                details.append(reservedCount).append(" exemplaire(s) réservé(s). ");
+            }
+
+            Span detailsMessage = new Span(details.toString());
+
+            resultLayout.add(statusMessage, detailsMessage);
             return;
         }
 
@@ -265,105 +560,143 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         selectedCopy = availableCopies.get(0);
         displayCopyInfo(selectedCopy);
 
+        // Si plusieurs copies sont disponibles, le mentionner
+        if (availableCopies.size() > 1) {
+            Span multipleAvailable = new Span("Note: " + (availableCopies.size() - 1) +
+                    " autres exemplaires sont également disponibles");
+            multipleAvailable.getStyle().set("font-style", "italic");
+            resultLayout.add(multipleAvailable);
+        }
+
         showNotification("Copie disponible trouvée (ID: " + selectedCopy.getId() + ")", "success");
     }
 
     private void displayCopyInfo(CopyDto copy) {
         resultLayout.removeAll();
 
-        FormLayout copyInfo = new FormLayout();
+        // En-tête avec le titre du document
+        H3 titleHeader = new H3("Document: " + copy.getItem().getTitle());
+        resultLayout.add(titleHeader);
 
-        copyInfo.addFormItem(new TextField("ID", copy.getId().toString()), "ID de copie");
-        copyInfo.addFormItem(new TextField("Titre", copy.getItem().getTitle()), "Titre");
-        copyInfo.addFormItem(new TextField("Type", copy.getItem().getType()), "Type");
-        copyInfo.addFormItem(new TextField("Statut", copy.getStatus()), "Statut");
+        // Création d'un cadre pour les informations de la copie
+        VerticalLayout copyDetailsLayout = new VerticalLayout();
+        copyDetailsLayout.getStyle().set("border", "1px solid var(--lumo-contrast-20pct)");
+        copyDetailsLayout.getStyle().set("border-radius", "var(--lumo-border-radius-m)");
+        copyDetailsLayout.getStyle().set("padding", "var(--lumo-space-m)");
+        copyDetailsLayout.getStyle().set("background-color", "var(--lumo-contrast-5pct)");
+
+        FormLayout copyInfo = new FormLayout();
+        copyInfo.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2));
+
+        // ID de la copie en gras
+        TextField idField = new TextField("ID de l'exemplaire");
+        idField.setValue(copy.getId().toString());
+        idField.setReadOnly(true);
+        idField.getStyle().set("font-weight", "bold");
+
+        copyInfo.add(idField);
+
+        // Ajout des autres informations
+        String typeLabel = switch (copy.getItem().getType()) {
+            case "book" -> "Livre";
+            case "magazine" -> "Revue";
+            case "board_game" -> "Jeu";
+            default -> copy.getItem().getType();
+        };
+
+        TextField typeField = new TextField("Type");
+        typeField.setValue(typeLabel);
+        typeField.setReadOnly(true);
+
+        TextField statusField = new TextField("Statut");
+        statusField.setValue(copy.getStatus());
+        statusField.setReadOnly(true);
+
+        // Coloration du champ statut selon la disponibilité
+        if ("available".equals(copy.getStatus())) {
+            statusField.getStyle().set("color", "green");
+        } else {
+            statusField.getStyle().set("color", "red");
+        }
+
+        copyInfo.add(typeField, statusField);
+
+        // Catégorie et éditeur si disponibles
+        if (copy.getItem().getCategory() != null) {
+            TextField categoryField = new TextField("Catégorie");
+            categoryField.setValue(copy.getItem().getCategory().getName());
+            categoryField.setReadOnly(true);
+            copyInfo.add(categoryField);
+        }
+
+        if (copy.getItem().getPublisher() != null) {
+            TextField publisherField = new TextField("Éditeur");
+            publisherField.setValue(copy.getItem().getPublisher().getName());
+            publisherField.setReadOnly(true);
+            copyInfo.add(publisherField);
+        }
+
+        copyDetailsLayout.add(copyInfo);
+        resultLayout.add(copyDetailsLayout);
 
         // Vérifier si la copie est disponible
         if (!"available".equals(copy.getStatus())) {
-            showNotification("Cette copie n'est pas disponible (statut: " + copy.getStatus() + ")", "warning");
+            Span unavailableMessage = new Span(
+                    "Cet exemplaire n'est pas disponible actuellement (statut: " + copy.getStatus() + ")");
+            unavailableMessage.getStyle().set("color", "var(--lumo-error-color)");
+            unavailableMessage.getStyle().set("font-weight", "bold");
 
             // Ajouter un bouton pour chercher une autre copie disponible
-            Button findAvailableCopyButton = new Button("Chercher une copie disponible de ce document");
+            Button findAvailableCopyButton = new Button("Chercher un exemplaire disponible de ce document");
             findAvailableCopyButton.addClickListener(e -> {
                 List<CopyDto> copies = copyService.findByItem(copy.getItem().getId());
                 processFoundCopies(copies);
             });
 
-            resultLayout.add(copyInfo, findAvailableCopyButton);
+            findAvailableCopyButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+            VerticalLayout unavailableLayout = new VerticalLayout(unavailableMessage, findAvailableCopyButton);
+            unavailableLayout.setSpacing(true);
+            unavailableLayout.setPadding(false);
+
+            resultLayout.add(unavailableLayout);
+            showNotification("Cette copie n'est pas disponible (statut: " + copy.getStatus() + ")", "warning");
             return;
         }
+
+        // Vérifier si le membre a atteint sa limite d'emprunts
+        if (activeLoanCount >= memberLoanLimit) {
+            Span limitMessage = new Span("Le membre a atteint sa limite d'emprunts (" +
+                    activeLoanCount + "/" + memberLoanLimit + ")");
+            limitMessage.getStyle().set("color", "var(--lumo-error-color)");
+            limitMessage.getStyle().set("font-weight", "bold");
+
+            resultLayout.add(limitMessage);
+            showNotification("Ce membre a atteint sa limite d'emprunts", "error");
+            return;
+        }
+
+        // Afficher le bouton pour créer l'emprunt
+        HorizontalLayout actionLayout = new HorizontalLayout();
 
         Button createLoanButton = new Button("Créer l'emprunt");
-        createLoanButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        createLoanButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
         createLoanButton.addClickListener(e -> createLoan());
 
-        resultLayout.add(copyInfo, createLoanButton);
-    }
+        Button cancelButton = new Button("Annuler");
+        cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        cancelButton.addClickListener(e -> resultLayout.removeAll());
 
-    private void checkMember() {
-        if (usernameField.isEmpty()) {
-            showNotification("Veuillez saisir un nom d'utilisateur", "error");
-            return;
-        }
+        actionLayout.add(createLoanButton, cancelButton);
+        actionLayout.setSpacing(true);
 
-        String username = usernameField.getValue();
-        Optional<UserDto> user = userService.findByUsername(username);
+        Span availableMessage = new Span("Exemplaire disponible pour l'emprunt");
+        availableMessage.getStyle().set("color", "var(--lumo-success-color)");
+        availableMessage.getStyle().set("font-weight", "bold");
 
-        if (user.isEmpty()) {
-            showNotification("Membre non trouvé", "error");
-            selectedMember = null;
-            return;
-        }
-
-        selectedMember = user.get();
-
-        // Vérifier si c'est un membre (non bénévole, non admin)
-        if (!"MEMBRE".equals(selectedMember.getRole().getName())) {
-            showNotification("L'utilisateur n'est pas un membre et ne peut pas emprunter", "error");
-            selectedMember = null;
-            return;
-        }
-
-        // Vérifier si le membre est actif
-        if (!"active".equals(selectedMember.getStatus())) {
-            showNotification("Le compte de ce membre n'est pas actif", "error");
-            selectedMember = null;
-            return;
-        }
-
-        // Vérifier les limites d'emprunt
-        checkLoanLimits();
-    }
-
-    private void checkLoanLimits() {
-        if (selectedMember == null) {
-            return;
-        }
-
-        // Récupérer les emprunts actifs du membre
-        List<LoanDto> activeLoans = loanService.findByMember(selectedMember.getId()).stream()
-                .filter(loan -> "borrowed".equals(loan.getStatus()))
-                .toList();
-
-        // Récupérer les paramètres de prêt
-        Optional<LoanSettingDto> settings = loanSettingService.findById(1L); // Assumer que les paramètres ont l'ID 1
-
-        if (settings.isEmpty()) {
-            showNotification("Paramètres d'emprunt non trouvés dans le système", "error");
-            return;
-        }
-
-        int maxLoans = selectedMember.getIsChild() ? settings.get().getMaxLoansChild()
-                : settings.get().getMaxLoansAdult();
-
-        if (activeLoans.size() >= maxLoans) {
-            showNotification("Ce membre a atteint sa limite d'emprunts (" + activeLoans.size() + "/" + maxLoans + ")",
-                    "error");
-            return;
-        }
-
-        showNotification("Le membre peut emprunter (" + activeLoans.size() + "/" + maxLoans + " emprunts actifs)",
-                "success");
+        resultLayout.add(availableMessage, actionLayout);
     }
 
     private void createLoan() {
@@ -384,12 +717,11 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         }
 
         // Vérifier les réservations existantes pour cette copie
-        List<LoanDto> existingLoans = loanService.findByCopy(selectedCopy.getId());
-        boolean isAlreadyBorrowed = existingLoans.stream()
-                .anyMatch(loan -> "borrowed".equals(loan.getStatus()));
+        // TODO: Implémentation future pour la vérification des réservations
 
-        if (isAlreadyBorrowed) {
-            showNotification("Cette copie est déjà empruntée", "error");
+        // Vérifier que le membre n'a pas atteint sa limite
+        if (activeLoanCount >= memberLoanLimit) {
+            showNotification("Ce membre a atteint sa limite d'emprunts", "error");
             return;
         }
 
@@ -414,10 +746,10 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
             selectedCopy.setStatus("borrowed");
             copyService.save(selectedCopy);
 
-            showNotification("Emprunt créé avec succès. Date de retour prévue: " + savedLoan.getReturnDueDate(),
-                    "success");
+            showNotification("Emprunt créé avec succès. Date de retour prévue: " +
+                    savedLoan.getReturnDueDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), "success");
 
-            // Réinitialiser les champs
+            // Réinitialiser les champs de recherche de copie
             copyIdField.clear();
             if (isbnField != null)
                 isbnField.clear();
@@ -425,14 +757,45 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
                 gtinField.clear();
             if (isniField != null)
                 isniField.clear();
-            usernameField.clear();
+            if (monthField != null)
+                monthField.clear();
+            if (yearField != null)
+                yearField.clear();
 
             selectedCopy = null;
-            selectedMember = null;
             resultLayout.removeAll();
+
+            // Rafraîchir les informations du membre et la liste des emprunts
+            displayMemberInfo();
 
         } catch (Exception e) {
             showNotification("Erreur lors de la création de l'emprunt: " + e.getMessage(), "error");
+        }
+    }
+
+    private void cancelLoan(LoanDto loan) {
+        // Vérifier que l'emprunt est bien actif
+        if (!"borrowed".equals(loan.getStatus())) {
+            showNotification("Cet emprunt ne peut pas être annulé car il n'est pas actif", "error");
+            return;
+        }
+
+        try {
+            // Mettre à jour le statut de l'emprunt
+            loan.setStatus("canceled");
+            loanService.save(loan);
+
+            // Mettre à jour le statut de la copie
+            CopyDto copy = loan.getCopy();
+            copy.setStatus("available");
+            copyService.save(copy);
+
+            showNotification("Emprunt annulé avec succès", "success");
+
+            // Rafraîchir les informations du membre et la liste des emprunts
+            displayMemberInfo();
+        } catch (Exception e) {
+            showNotification("Erreur lors de l'annulation de l'emprunt: " + e.getMessage(), "error");
         }
     }
 
