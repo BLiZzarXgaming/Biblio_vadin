@@ -7,6 +7,7 @@ import com.example.application.views.myview.admin.AdminHomeView;
 import com.example.application.views.myview.benevole.BenevoleAjouterView;
 import com.example.application.views.myview.benevole.BenevoleEmpruntView;
 import com.example.application.views.myview.benevole.BenevoleHomeView;
+import com.example.application.views.myview.benevole.BenevoleListeMembresView;
 import com.example.application.views.myview.benevole.BenevoleRetourView;
 import com.example.application.views.myview.membre.testm1;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -112,6 +113,7 @@ public class MainLayout extends AppLayout {
         nav.addItem(new SideNavItem("Ajout", BenevoleAjouterView.class));
         nav.addItem(new SideNavItem("Emprunts", BenevoleEmpruntView.class));
         nav.addItem(new SideNavItem("Retours", BenevoleRetourView.class));
+        nav.addItem(new SideNavItem("Membres", BenevoleListeMembresView.class));
 
         return nav;
     }
