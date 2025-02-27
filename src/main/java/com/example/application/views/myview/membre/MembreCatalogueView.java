@@ -1,11 +1,21 @@
 package com.example.application.views.myview.membre;
 
-import com.example.application.entity.DTO.*;
+import com.example.application.entity.DTO.CopyDto;
+import com.example.application.entity.DTO.ItemDto;
+import com.example.application.entity.DTO.LoanSettingDto;
+import com.example.application.entity.DTO.ReservationDto;
+import com.example.application.entity.DTO.SpecialLimitDto;
+import com.example.application.entity.DTO.UserDto;
+import com.example.application.entity.SpecialLimit;
+import com.example.application.entity.User;
+import com.example.application.objectcustom.MoisOption;
+import com.example.application.security.Roles;
 import com.example.application.service.implementation.*;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -18,298 +28,423 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.value.ValueChangeMode;
+import com.vaadin.flow.data.provider.CallbackDataProvider;
+import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.icon.Icon;
 import jakarta.annotation.security.RolesAllowed;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @PageTitle("Catalogue des Documents")
-@Route(value = "member/catalog", layout = MainLayout.class)
+@Route(value = "member/catalogue", layout = MainLayout.class)
 @RolesAllowed("ROLE_MEMBRE")
 public class MembreCatalogueView extends VerticalLayout {
+    private ComboBox<String> typeComboBox;
+    private FormLayout searchFieldsLayout;
 
-    // Services
-    private final ItemServiceV2 itemService;
-    private final BookServiceV2 bookService;
-    private final MagazineServiceV2 magazineService;
-    private final BoardGameServiceV2 boardGameService;
-    private final CategoryServiceV2 categoryService;
-    private final PublisherServiceV2 publisherService;
-    private final CopyServiceV2 copyService;
-    private final ReservationServiceV2 reservationService;
-    private final UserServiceV2 userService;
-    private final LoanSettingServiceV2 loanSettingService;
-    private final SpecialLimitService specialLimitService;
-
-    // UI Components
-    private TextField searchField;
-    private ComboBox<String> typeFilter;
-    private ComboBox<CategoryDto> categoryFilter;
-    private Grid<ItemDto> resultsGrid;
     private Button searchButton;
-    private Button resetButton;
+    private Button clearButton;
+    private Boolean searchFieldsVisible = true;
 
-    // Current user data
+    private Grid<ItemDto> resultsGrid;
+    private CallbackDataProvider<ItemDto, Void> dataProvider;
+
+    private ItemServiceV2 itemService;
+    private PublisherServiceV2 publisherService;
+    private CategoryServiceV2 categoryService;
+    private SupplierServiceV2 supplierService;
+    private BookServiceV2 bookService;
+    private MagazineServiceV2 magazineService;
+    private BoardGameServiceV2 boardGameService;
+    private CopyServiceV2 copyService;
+    private UserServiceV2 userService;
+    private ReservationServiceV2 reservationService;
+    private LoanServiceV2 loanService;
+    private LoanSettingServiceV2 loanSettingService;
+    private SpecialLimitService specialLimitService;
+
+    // Pagination
+    private int pageSize = 10;
+    private int currentPage = 0;
+    private Span paginationInfo;
+    private Button prevButton;
+    private Button nextButton;
+
+    // Current user
     private UserDto currentUser;
-    private int reservationLimit = 0;
-    private int currentReservations = 0;
+
+    // Search criteria
+    private String selectedType;
+    private Map<String, Object> searchCriteria = new HashMap<>();
+
+    // Search fields
+    private TextField titleField;
+    private TextField authorField;
+    private TextField isbnField;
+    private DatePicker publicationDateField;
+    private ComboBox<com.example.application.entity.DTO.CategoryDto> categoryComboBox;
+    private ComboBox<com.example.application.entity.DTO.PublisherDto> publisherComboBox;
+
+    private TextField keywordField;
+
+    private TextField isniField;
+    private ComboBox<MoisOption> monthComboBox;
+    private IntegerField yearField;
+
+    private IntegerField numberOfPiecesField;
+    private IntegerField recommendedAgeField;
+    private TextField gtinField;
 
     public MembreCatalogueView(ItemServiceV2 itemService,
+            PublisherServiceV2 publisherService,
+            CategoryServiceV2 categoryService,
+            SupplierServiceV2 supplierService,
             BookServiceV2 bookService,
             MagazineServiceV2 magazineService,
             BoardGameServiceV2 boardGameService,
-            CategoryServiceV2 categoryService,
-            PublisherServiceV2 publisherService,
             CopyServiceV2 copyService,
-            ReservationServiceV2 reservationService,
             UserServiceV2 userService,
+            ReservationServiceV2 reservationService,
+            LoanServiceV2 loanService,
             LoanSettingServiceV2 loanSettingService,
             SpecialLimitService specialLimitService) {
         this.itemService = itemService;
+        this.publisherService = publisherService;
+        this.categoryService = categoryService;
+        this.supplierService = supplierService;
         this.bookService = bookService;
         this.magazineService = magazineService;
         this.boardGameService = boardGameService;
-        this.categoryService = categoryService;
-        this.publisherService = publisherService;
         this.copyService = copyService;
-        this.reservationService = reservationService;
         this.userService = userService;
+        this.reservationService = reservationService;
+        this.loanService = loanService;
         this.loanSettingService = loanSettingService;
         this.specialLimitService = specialLimitService;
 
-        setSizeFull();
-        setPadding(true);
-        setSpacing(true);
-
-        // Load current user information
-        loadCurrentUserInfo();
-
-        // Create components
-        createHeader();
-        createSearchBar();
-        createResultsGrid();
-
-        // Initial search with empty criteria
-        searchItems();
-    }
-
-    private void loadCurrentUserInfo() {
-        // In a real app, get the current user from session or security context
-        // This is just a placeholder implementation
-        Optional<UserDto> user = userService.findByUsername(getCurrentUsername());
+        // Get current user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        Optional<UserDto> user = userService.findByUsername(username);
         if (user.isPresent()) {
             currentUser = user.get();
-
-            // Load reservation limits
-            loadReservationLimits();
-
-            // Count current reservations
-            List<ReservationDto> activeReservations = reservationService.findByMember(currentUser.getId())
-                    .stream()
-                    .filter(res -> "reserved".equals(res.getStatus()) || "ready".equals(res.getStatus()))
-                    .toList();
-            currentReservations = activeReservations.size();
-        }
-    }
-
-    private String getCurrentUsername() {
-        // In a real app, get username from security context
-        // For demo purposes, return a sample username
-        return "UsernameMembre1";
-    }
-
-    private void loadReservationLimits() {
-        // Get default reservation limits
-        Optional<LoanSettingDto> settings = loanSettingService.findById(1L);
-        if (settings.isPresent()) {
-            if (currentUser.getIsChild()) {
-                reservationLimit = settings.get().getMaxReservationsChild();
-            } else {
-                reservationLimit = settings.get().getMaxReservationsAdult();
-            }
-        } else {
-            // Default values if settings not found
-            reservationLimit = currentUser.getIsChild() ? 3 : 5;
         }
 
-        // Check for special limits (would use SpecialLimitService in a real
-        // implementation)
-        // For demo purposes, we'll just use the default limits
-    }
+        setWidth("100%");
+        getStyle().set("flex-grow", "1");
+        setHeight("100%");
 
-    private void createHeader() {
         H2 title = new H2("Catalogue des Documents");
         add(title);
 
-        // User info and limits
-        if (currentUser != null) {
-            HorizontalLayout userInfoLayout = new HorizontalLayout();
-            userInfoLayout.setWidthFull();
+        configureComponents();
+    }
 
-            Span nameSpan = new Span("Utilisateur: " + currentUser.getFirstName() + " " + currentUser.getLastName());
+    private void configureComponents() {
+        // Initialisation des composants
+        typeComboBox = new ComboBox<>("Type de document");
+        typeComboBox.setItems("Tous", "Livre", "Revue", "Jeu");
+        typeComboBox.setValue("Tous");
 
-            Span limitsSpan = new Span("Réservations: " + currentReservations + "/" + reservationLimit);
-            limitsSpan.getStyle().set("margin-left", "auto");
+        searchFieldsLayout = new FormLayout();
+        searchFieldsLayout.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2),
+                new FormLayout.ResponsiveStep("800px", 3));
 
-            if (currentReservations >= reservationLimit) {
-                limitsSpan.getStyle().set("color", "var(--lumo-error-color)");
-                limitsSpan.getStyle().set("font-weight", "bold");
-            } else if (currentReservations >= reservationLimit * 0.8) {
-                limitsSpan.getStyle().set("color", "var(--lumo-warning-color)");
-            } else {
-                limitsSpan.getStyle().set("color", "var(--lumo-success-color)");
+        searchButton = new Button("Rechercher", e -> searchItems());
+        searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        clearButton = new Button("Réinitialiser", e -> clearSearchFields());
+        clearButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+        HorizontalLayout searchActions = new HorizontalLayout(searchButton, clearButton);
+        searchActions.setSpacing(true);
+
+        add(createSearchLayout(), searchActions);
+        configureGrid();
+        configurePagination();
+    }
+
+    private void configurePagination() {
+        paginationInfo = new Span("Page 1");
+
+        prevButton = new Button(new Icon(VaadinIcon.ARROW_LEFT), e -> {
+            if (currentPage > 0) {
+                currentPage--;
+                updateResults();
             }
+        });
+        prevButton.setEnabled(false);
 
-            userInfoLayout.add(nameSpan, limitsSpan);
-            add(userInfoLayout);
+        nextButton = new Button(new Icon(VaadinIcon.ARROW_RIGHT), e -> {
+            currentPage++;
+            updateResults();
+        });
+
+        HorizontalLayout paginationLayout = new HorizontalLayout(prevButton, paginationInfo, nextButton);
+        paginationLayout.setAlignItems(Alignment.CENTER);
+        paginationLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+
+        add(paginationLayout);
+    }
+
+    private VerticalLayout createSearchLayout() {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setSpacing(false);
+        layout.setPadding(false);
+
+        // Listener pour adapter les inputs en fonction du type
+        typeComboBox.addValueChangeListener(e -> updateSearchFields());
+
+        // Initialisation des champs de recherche
+        updateSearchFields();
+
+        layout.add(typeComboBox, searchFieldsLayout);
+        return layout;
+    }
+
+    private void updateCategoryComboBox() {
+        List<com.example.application.entity.DTO.CategoryDto> categories = categoryService.findAll();
+        categoryComboBox.setItems(categories);
+        categoryComboBox.setItemLabelGenerator(com.example.application.entity.DTO.CategoryDto::getName);
+    }
+
+    private void updatePublisherComboBox() {
+        List<com.example.application.entity.DTO.PublisherDto> publishers = publisherService.findAll();
+        publisherComboBox.setItems(publishers);
+        publisherComboBox.setItemLabelGenerator(com.example.application.entity.DTO.PublisherDto::getName);
+    }
+
+    private void updateSearchFields() {
+        searchFieldsLayout.removeAll();
+
+        selectedType = typeComboBox.getValue();
+
+        if ("Livre".equals(selectedType)) {
+            createBookSearchFields();
+        } else if ("Revue".equals(selectedType)) {
+            createMagazineSearchFields();
+        } else if ("Jeu".equals(selectedType)) {
+            createGameSearchFields();
+        } else {
+            createGeneralSearchFields();
         }
     }
 
-    private void createSearchBar() {
-        HorizontalLayout searchLayout = new HorizontalLayout();
-        searchLayout.setWidthFull();
-        searchLayout.setAlignItems(Alignment.BASELINE);
+    private void createBookSearchFields() {
+        searchCriteria.clear();
 
-        // Search field
-        searchField = new TextField();
-        searchField.setPlaceholder("Rechercher par titre, auteur, ISBN, etc.");
-        searchField.setClearButtonVisible(true);
-        searchField.setValueChangeMode(ValueChangeMode.EAGER);
-        searchField.setWidthFull();
+        titleField = new TextField("Titre");
+        authorField = new TextField("Auteur");
+        isbnField = new TextField("ISBN");
+        publicationDateField = new DatePicker("Date de Publication");
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
 
-        // Type filter
-        typeFilter = new ComboBox<>("Type");
-        typeFilter.setItems("Tous", "Livre", "Revue", "Jeu");
-        typeFilter.setValue("Tous");
-        typeFilter.setWidth("150px");
+        updateCategoryComboBox();
+        updatePublisherComboBox();
 
-        // Category filter
-        categoryFilter = new ComboBox<>("Catégorie");
-        categoryFilter.setItems(categoryService.findAll());
-        categoryFilter.setItemLabelGenerator(CategoryDto::getName);
-        categoryFilter.setWidth("200px");
-
-        // Search button
-        searchButton = new Button("Rechercher");
-        searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        searchButton.addClickListener(e -> searchItems());
-
-        // Reset button
-        resetButton = new Button("Réinitialiser");
-        resetButton.addClickListener(e -> {
-            searchField.clear();
-            typeFilter.setValue("Tous");
-            categoryFilter.clear();
-            searchItems();
-        });
-
-        searchLayout.add(searchField, typeFilter, categoryFilter, searchButton, resetButton);
-        searchLayout.setFlexGrow(1, searchField);
-
-        add(searchLayout);
+        searchFieldsLayout.add(titleField, authorField, isbnField, publicationDateField, categoryComboBox,
+                publisherComboBox);
     }
 
-    private void createResultsGrid() {
-        resultsGrid = new Grid<>();
-        resultsGrid.addColumn(ItemDto::getTitle).setHeader("Titre").setSortable(true).setAutoWidth(true).setFlexGrow(1);
+    private void createMagazineSearchFields() {
+        searchCriteria.clear();
 
-        // Type column with human-readable values
-        resultsGrid.addColumn(item -> {
-            String type = item.getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
-        }).setHeader("Type").setSortable(true).setAutoWidth(true);
+        titleField = new TextField("Titre");
+        isniField = new TextField("ISNI");
+        monthComboBox = new ComboBox<>("Mois de Publication");
+        yearField = new IntegerField("Année");
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
 
-        resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setSortable(true)
-                .setAutoWidth(true);
-        resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur").setSortable(true)
-                .setAutoWidth(true);
+        List<MoisOption> listeDesMois = MoisOption.getListeMois();
+        monthComboBox.setItems(listeDesMois);
+        monthComboBox.setItemLabelGenerator(MoisOption::getNom);
 
-        // Availability status column
-        resultsGrid.addComponentColumn(item -> {
-            List<CopyDto> copies = copyService.findByItem(item.getId());
-            long availableCount = copies.stream().filter(c -> "available".equals(c.getStatus())).count();
+        updateCategoryComboBox();
+        updatePublisherComboBox();
 
-            Span statusSpan = new Span();
-            if (availableCount > 0) {
-                statusSpan.setText(availableCount + " disponible(s)");
-                statusSpan.getStyle().set("color", "var(--lumo-success-color)");
-            } else {
-                statusSpan.setText("Non disponible");
-                statusSpan.getStyle().set("color", "var(--lumo-error-color)");
-            }
-            return statusSpan;
-        }).setHeader("Disponibilité").setAutoWidth(true);
+        searchFieldsLayout.add(titleField, isniField, monthComboBox, yearField, categoryComboBox, publisherComboBox);
+    }
 
-        // Action button column
-        resultsGrid.addComponentColumn(item -> {
-            Button detailsButton = new Button("Détails");
-            detailsButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-            detailsButton.addClickListener(e -> showItemDetails(item));
-            return detailsButton;
-        }).setHeader("Actions").setAutoWidth(true);
+    private void createGameSearchFields() {
+        searchCriteria.clear();
 
-        resultsGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
-        // resultsGrid.setHeightByRows(true);
-        resultsGrid.setMinHeight("400px");
+        titleField = new TextField("Titre");
+        numberOfPiecesField = new IntegerField("Nombre de Pièces");
+        recommendedAgeField = new IntegerField("Âge Recommandé");
+        gtinField = new TextField("GTIN");
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
 
-        // Double-click to view details
-        resultsGrid.addItemDoubleClickListener(event -> showItemDetails(event.getItem()));
+        updateCategoryComboBox();
+        updatePublisherComboBox();
 
-        add(resultsGrid);
-        setFlexGrow(1, resultsGrid);
+        searchFieldsLayout.add(titleField, numberOfPiecesField, recommendedAgeField, gtinField, categoryComboBox,
+                publisherComboBox);
+    }
+
+    private void createGeneralSearchFields() {
+        searchCriteria.clear();
+
+        keywordField = new TextField("Mot-clé");
+        keywordField.setPlaceholder("Rechercher par titre, auteur, etc.");
+        keywordField.setClearButtonVisible(true);
+
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
+
+        updateCategoryComboBox();
+        updatePublisherComboBox();
+
+        searchFieldsLayout.add(keywordField, categoryComboBox, publisherComboBox);
     }
 
     private void searchItems() {
-        String searchTerm = searchField.getValue();
-        String selectedType = typeFilter.getValue();
-        CategoryDto selectedCategory = categoryFilter.getValue();
+        selectedType = typeComboBox.getValue();
+        searchCriteria.clear();
+        currentPage = 0;
 
-        // Convert UI type to backend type
-        String backendType = null;
-        if (!"Tous".equals(selectedType)) {
-            backendType = switch (selectedType) {
-                case "Livre" -> "book";
-                case "Revue" -> "magazine";
-                case "Jeu" -> "board_game";
-                default -> null;
-            };
+        if ("Livre".equals(selectedType)) {
+            searchCriteria.put("title", titleField.getValue());
+            searchCriteria.put("author", authorField.getValue());
+            searchCriteria.put("isbn", isbnField.getValue());
+            searchCriteria.put("publicationDate", publicationDateField.getValue());
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
+        } else if ("Revue".equals(selectedType)) {
+            searchCriteria.put("title", titleField.getValue());
+            searchCriteria.put("isni", isniField.getValue());
+            if (monthComboBox.getValue() != null) {
+                searchCriteria.put("month", monthComboBox.getValue().getNumero());
+            } else {
+                searchCriteria.put("month", "");
+            }
+            searchCriteria.put("year", yearField != null ? yearField.getValue() : null);
+            searchCriteria.put("publicationDate", null);
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
+        } else if ("Jeu".equals(selectedType)) {
+            searchCriteria.put("title", titleField.getValue());
+            searchCriteria.put("numberOfPieces", numberOfPiecesField.getValue());
+            searchCriteria.put("recommendedAge", recommendedAgeField.getValue());
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
+            searchCriteria.put("gtin", gtinField.getValue());
+        } else {
+            searchCriteria.put("keyword", keywordField.getValue());
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
         }
 
-        // Build search criteria
-        java.util.Map<String, Object> searchCriteria = new java.util.HashMap<>();
-
-        if (searchTerm != null && !searchTerm.isEmpty()) {
-            searchCriteria.put("keyword", searchTerm);
-        }
-
-        if (selectedCategory != null) {
-            searchCriteria.put("category", selectedCategory);
-        }
-
-        // Execute search
-        List<ItemDto> results = itemService.fetchItemsWithFilters(searchCriteria, selectedType, 0, 1000);
-
-        // Update grid
-        resultsGrid.setItems(results);
-
-        // Show message if no results
-        if (results.isEmpty()) {
-            Notification.show("Aucun résultat trouvé pour cette recherche", 3000, Notification.Position.MIDDLE);
-        }
+        updateResults();
     }
 
-    private void showItemDetails(ItemDto item) {
+    private void updateResults() {
+        int offset = currentPage * pageSize;
+
+        resultsGrid.setItems(query -> {
+            int limit = query.getLimit();
+            List<ItemDto> items = itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit);
+
+            // Disable/enable pagination buttons
+            prevButton.setEnabled(currentPage > 0);
+            nextButton.setEnabled(items.size() == pageSize);
+
+            // Update pagination info
+            paginationInfo.setText("Page " + (currentPage + 1));
+
+            return items.stream();
+        });
+
+        // Scroll to top of results
+        resultsGrid.scrollToStart();
+    }
+
+    private void clearSearchFields() {
+        typeComboBox.setValue("Tous");
+        updateSearchFields();
+        searchCriteria.clear();
+        currentPage = 0;
+        updateResults();
+    }
+
+    private String translateType(String type) {
+        return switch (type) {
+            case "book" -> "Livre";
+            case "magazine" -> "Revue";
+            case "board_game" -> "Jeu";
+            default -> type;
+        };
+    }
+
+    private void configureGrid() {
+        resultsGrid = new Grid<>();
+        resultsGrid.setSizeFull();
+        resultsGrid.addClassName("catalogue-grid");
+
+        resultsGrid.removeAllColumns();
+        resultsGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
+        resultsGrid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
+
+        resultsGrid.addColumn(ItemDto::getTitle).setHeader("Titre").setResizable(true).setAutoWidth(true)
+                .setFlexGrow(1);
+        resultsGrid.addColumn(item -> translateType(item.getType())).setHeader("Type").setResizable(true)
+                .setAutoWidth(true);
+        resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setResizable(true)
+                .setAutoWidth(true);
+        resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur").setResizable(true)
+                .setAutoWidth(true);
+
+        // Add availability column
+        resultsGrid.addComponentColumn(item -> {
+            List<CopyDto> copies = copyService.findByItem(item.getId());
+            long availableCount = copies.stream()
+                    .filter(copy -> "available".equals(copy.getStatus()))
+                    .count();
+
+            Span badge = new Span(availableCount + " disponible(s)");
+            badge.getElement().getThemeList().add("badge");
+
+            if (availableCount > 0) {
+                badge.getElement().getThemeList().add("success");
+            } else {
+                badge.getElement().getThemeList().add("error");
+            }
+
+            return badge;
+        }).setHeader("Disponibilité").setAutoWidth(true);
+
+        // Add view details button
+        resultsGrid.addComponentColumn(item -> {
+            Button detailsButton = new Button("Détails", event -> showItemDetailsDialog(item));
+            detailsButton.addThemeVariants(ButtonVariant.LUMO_SMALL);
+            return detailsButton;
+        }).setHeader("Actions").setAutoWidth(true);
+
+        resultsGrid.setPageSize(pageSize);
+        resultsGrid.setHeight("70vh");
+
+        // Initial items load
+        resultsGrid.setItems(query -> {
+            int limit = query.getLimit();
+            return itemService.fetchItemsWithFilters(searchCriteria, selectedType, 0, limit).stream();
+        });
+
+        add(resultsGrid);
+    }
+
+    private void showItemDetailsDialog(ItemDto selectedItem) {
         Dialog dialog = new Dialog();
-        dialog.setWidth("800px");
+        dialog.setWidth("700px");
         dialog.setHeight("auto");
         dialog.setDraggable(true);
         dialog.setResizable(true);
@@ -318,255 +453,231 @@ public class MembreCatalogueView extends VerticalLayout {
         dialogLayout.setPadding(true);
         dialogLayout.setSpacing(true);
 
-        // Item header with title
-        H3 title = new H3(item.getTitle());
+        // Title with link if available
+        H3 title;
+        if (selectedItem.getLink() != null && !selectedItem.getLink().isEmpty()) {
+            Anchor titleLink = new Anchor(selectedItem.getLink(), selectedItem.getTitle(), AnchorTarget.BLANK);
+            title = new H3(titleLink);
+        } else {
+            title = new H3(selectedItem.getTitle());
+        }
+        dialogLayout.add(title);
 
-        // Basic info section
-        FormLayout infoLayout = new FormLayout();
-        infoLayout.setResponsiveSteps(
+        // Create a form layout for details
+        FormLayout detailsLayout = new FormLayout();
+        detailsLayout.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("500px", 2));
+                new FormLayout.ResponsiveStep("400px", 2));
 
-        // Type field
-        String typeLabel = switch (item.getType()) {
-            case "book" -> "Livre";
-            case "magazine" -> "Revue";
-            case "board_game" -> "Jeu";
-            default -> item.getType();
-        };
-        TextField typeField = new TextField("Type");
-        typeField.setValue(typeLabel);
-        typeField.setReadOnly(true);
+        // Basic information
+        Span typeLabel = new Span(translateType(selectedItem.getType()));
+        typeLabel.getElement().getThemeList().add("badge");
 
-        // Category field
-        TextField categoryField = new TextField("Catégorie");
-        categoryField.setValue(item.getCategory().getName());
-        categoryField.setReadOnly(true);
+        Span categoryLabel = new Span(selectedItem.getCategory().getName());
+        categoryLabel.getElement().getThemeList().add("badge");
+        categoryLabel.getElement().getThemeList().add("contrast");
 
-        // Publisher field
-        TextField publisherField = new TextField("Éditeur");
-        publisherField.setValue(item.getPublisher().getName());
-        publisherField.setReadOnly(true);
+        detailsLayout.addFormItem(typeLabel, "Type");
+        detailsLayout.addFormItem(categoryLabel, "Catégorie");
+        detailsLayout.addFormItem(new Span(selectedItem.getPublisher().getName()), "Éditeur");
 
-        infoLayout.add(typeField, categoryField, publisherField);
-
-        // Specific details based on item type
-        VerticalLayout specificDetailsLayout = new VerticalLayout();
-        specificDetailsLayout.setPadding(false);
-        specificDetailsLayout.setSpacing(true);
-
-        String itemType = item.getType();
-        FormLayout detailsForm = new FormLayout();
-        detailsForm.setResponsiveSteps(
-                new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("500px", 2));
-
+        // Type-specific details
+        String itemType = selectedItem.getType();
         if ("book".equals(itemType)) {
-            Optional<BookDto> book = bookService.findById(item.getId());
+            Optional<com.example.application.entity.DTO.BookDto> book = bookService.findById(selectedItem.getId());
             if (book.isPresent()) {
-                BookDto bookData = book.get();
-
-                TextField authorField = new TextField("Auteur");
-                authorField.setValue(bookData.getAuthor());
-                authorField.setReadOnly(true);
-
-                TextField isbnField = new TextField("ISBN");
-                isbnField.setValue(bookData.getIsbn());
-                isbnField.setReadOnly(true);
-
-                TextField pubDateField = new TextField("Date de publication");
-                pubDateField.setValue(bookData.getPublicationDate().toString());
-                pubDateField.setReadOnly(true);
-
-                detailsForm.add(authorField, isbnField, pubDateField);
+                detailsLayout.addFormItem(new Span(book.get().getAuthor()), "Auteur");
+                detailsLayout.addFormItem(new Span(book.get().getIsbn()), "ISBN");
+                detailsLayout.addFormItem(new Span(book.get().getPublicationDate().toString()), "Date de publication");
             }
         } else if ("magazine".equals(itemType)) {
-            Optional<MagazineDto> magazine = magazineService.findById(item.getId());
+            Optional<com.example.application.entity.DTO.MagazineDto> magazine = magazineService
+                    .findById(selectedItem.getId());
             if (magazine.isPresent()) {
-                MagazineDto magazineData = magazine.get();
-
-                TextField isniField = new TextField("ISNI");
-                isniField.setValue(magazineData.getIsni());
-                isniField.setReadOnly(true);
-
-                TextField issueField = new TextField("Numéro");
-                issueField.setValue(magazineData.getMonth() + " " + magazineData.getYear());
-                issueField.setReadOnly(true);
-
-                TextField pubDateField = new TextField("Date de publication");
-                pubDateField.setValue(magazineData.getPublicationDate().toString());
-                pubDateField.setReadOnly(true);
-
-                detailsForm.add(isniField, issueField, pubDateField);
+                detailsLayout.addFormItem(new Span(magazine.get().getIsni()), "ISNI");
+                detailsLayout.addFormItem(new Span(magazine.get().getMonth() + " " + magazine.get().getYear()),
+                        "Publication");
             }
         } else if ("board_game".equals(itemType)) {
-            Optional<BoardGameDto> boardGame = boardGameService.findById(item.getId());
+            Optional<com.example.application.entity.DTO.BoardGameDto> boardGame = boardGameService
+                    .findById(selectedItem.getId());
             if (boardGame.isPresent()) {
-                BoardGameDto gameData = boardGame.get();
+                detailsLayout.addFormItem(new Span(String.valueOf(boardGame.get().getNumberOfPieces())),
+                        "Nombre de pièces");
+                detailsLayout.addFormItem(new Span(String.valueOf(boardGame.get().getRecommendedAge())),
+                        "Âge recommandé");
+                detailsLayout.addFormItem(new Span(boardGame.get().getGtin()), "GTIN");
 
-                IntegerField piecesField = new IntegerField("Nombre de pièces");
-                piecesField.setValue(gameData.getNumberOfPieces());
-                piecesField.setReadOnly(true);
+                // Game rules in a collapsible section
+                Div rulesContainer = new Div();
+                rulesContainer.getStyle().set("white-space", "pre-wrap");
+                rulesContainer.getStyle().set("max-height", "150px");
+                rulesContainer.getStyle().set("overflow-y", "auto");
+                rulesContainer.getStyle().set("border", "1px solid var(--lumo-contrast-10pct)");
+                rulesContainer.getStyle().set("padding", "var(--lumo-space-s)");
+                rulesContainer.getStyle().set("margin-top", "var(--lumo-space-s)");
+                rulesContainer.setText(boardGame.get().getGameRules());
 
-                IntegerField ageField = new IntegerField("Âge recommandé");
-                ageField.setValue(gameData.getRecommendedAge());
-                ageField.setReadOnly(true);
-
-                TextField gtinField = new TextField("GTIN");
-                gtinField.setValue(gameData.getGtin());
-                gtinField.setReadOnly(true);
-
-                detailsForm.add(piecesField, ageField, gtinField);
-
-                // Game rules in separate section
-                H4 rulesTitle = new H4("Règles du jeu");
-                Paragraph rules = new Paragraph(gameData.getGameRules());
-                specificDetailsLayout.add(rulesTitle, rules);
+                detailsLayout.addFormItem(rulesContainer, "Règles du jeu");
             }
         }
 
-        specificDetailsLayout.addComponentAsFirst(detailsForm);
+        dialogLayout.add(detailsLayout);
 
-        // Availability section
+        // Availability information
+        List<CopyDto> copies = copyService.findByItem(selectedItem.getId());
+
         H4 availabilityTitle = new H4("Disponibilité");
 
-        List<CopyDto> copies = copyService.findByItem(item.getId());
         long totalCopies = copies.size();
-        long availableCopies = copies.stream().filter(copy -> "available".equals(copy.getStatus())).count();
+        long availableCopies = copies.stream()
+                .filter(copy -> "available".equals(copy.getStatus()))
+                .count();
 
-        Paragraph availabilityInfo = new Paragraph(
-                "Exemplaires disponibles: " + availableCopies + " sur " + totalCopies + " au total");
+        Span availabilityInfo = new Span(availableCopies + " sur " + totalCopies + " exemplaire(s) disponible(s)");
 
-        // Reserve button
-        Button reserveButton = new Button("Réserver");
-        reserveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
-
-        if (availableCopies > 0) {
-            // Check if user has reached reservation limit
-            if (currentReservations >= reservationLimit) {
-                reserveButton.setEnabled(false);
-                reserveButton.getElement().setAttribute("title", "Vous avez atteint votre limite de réservations");
-
-                Paragraph limitWarning = new Paragraph("Vous avez atteint votre limite de réservations (" +
-                        currentReservations + "/" + reservationLimit + ")");
-                limitWarning.getStyle().set("color", "var(--lumo-error-color)");
-                specificDetailsLayout.add(limitWarning);
-            } else {
-                reserveButton.setEnabled(true);
-                reserveButton.addClickListener(e -> createReservation(item, dialog));
-            }
-        } else {
+        // Add reservation button if copies are available and user is logged in
+        Button reserveButton = null;
+        if (availableCopies > 0 && currentUser != null) {
+            reserveButton = new Button("Réserver", e -> createReservation(selectedItem, copies));
+            reserveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+        } else if (currentUser != null) {
+            // Disabled button with explanation
+            reserveButton = new Button("Aucun exemplaire disponible");
             reserveButton.setEnabled(false);
-            reserveButton.getElement().setAttribute("title", "Aucun exemplaire disponible");
+        }
+
+        VerticalLayout availabilityLayout = new VerticalLayout(availabilityTitle, availabilityInfo);
+        availabilityLayout.setSpacing(false);
+        availabilityLayout.setPadding(false);
+
+        dialogLayout.add(availabilityLayout);
+
+        if (reserveButton != null) {
+            dialogLayout.add(reserveButton);
         }
 
         // Close button
-        Button closeButton = new Button("Fermer");
-        closeButton.addClickListener(e -> dialog.close());
+        Button closeButton = new Button("Fermer", e -> dialog.close());
+        closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-        HorizontalLayout buttonsLayout = new HorizontalLayout(reserveButton, closeButton);
-        buttonsLayout.setSpacing(true);
-
-        // Add all components to dialog
-        dialogLayout.add(
-                title,
-                infoLayout,
-                new Hr(),
-                specificDetailsLayout,
-                new Hr(),
-                availabilityTitle,
-                availabilityInfo,
-                buttonsLayout);
+        dialogLayout.add(closeButton);
 
         dialog.add(dialogLayout);
         dialog.open();
     }
 
-    private void createReservation(ItemDto item, Dialog detailsDialog) {
-        // Check if user can make reservations
-        if (currentReservations >= reservationLimit) {
+    private void createReservation(ItemDto item, List<CopyDto> copies) {
+        // First check if the user can make more reservations
+        int maxReservations = getMaxReservationsForUser();
+
+        // Get active reservations count
+        List<ReservationDto> activeReservations = reservationService.findByMember(currentUser.getId())
+                .stream()
+                .filter(res -> "reserved".equals(res.getStatus()) || "ready".equals(res.getStatus()))
+                .toList();
+
+        if (activeReservations.size() >= maxReservations) {
             Notification.show(
-                    "Vous avez atteint votre limite de réservations",
-                    5000,
+                    "Vous avez atteint votre limite de réservations (" + maxReservations + ")",
+                    3000,
                     Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
             return;
         }
 
-        // Find available copy
-        List<CopyDto> copies = copyService.findByItem(item.getId());
+        // Check if the user already has a reservation for this item
+        boolean alreadyReserved = activeReservations.stream()
+                .anyMatch(res -> res.getCopy().getItem().getId().equals(item.getId()));
+
+        if (alreadyReserved) {
+            Notification.show(
+                    "Vous avez déjà réservé ce document",
+                    3000,
+                    Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_WARNING);
+            return;
+        }
+
+        // Get the first available copy
         Optional<CopyDto> availableCopy = copies.stream()
                 .filter(copy -> "available".equals(copy.getStatus()))
                 .findFirst();
 
         if (availableCopy.isEmpty()) {
             Notification.show(
-                    "Désolé, ce document n'est plus disponible",
-                    5000,
+                    "Aucun exemplaire n'est disponible pour réservation",
+                    3000,
                     Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
             return;
         }
 
-        // Create confirmation dialog
-        Dialog confirmDialog = new Dialog();
-        confirmDialog.setHeaderTitle("Confirmer la réservation");
+        // Confirm dialog
+        ConfirmDialog confirmDialog = new ConfirmDialog();
+        confirmDialog.setHeader("Confirmer la réservation");
+        confirmDialog.setText("Souhaitez-vous réserver \"" + item.getTitle() + "\" ?");
 
-        VerticalLayout confirmLayout = new VerticalLayout();
-        confirmLayout.add(new Paragraph("Voulez-vous réserver le document \"" + item.getTitle() + "\" ?"));
+        confirmDialog.setCancelable(true);
+        confirmDialog.setCancelText("Annuler");
 
-        Button confirmButton = new Button("Confirmer");
-        confirmButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        confirmButton.addClickListener(e -> {
-            // Create reservation
-            ReservationDto reservation = new ReservationDto();
-            reservation.setCopy(availableCopy.get());
-            reservation.setMember(currentUser);
-            reservation.setReservationDate(LocalDate.now());
-            reservation.setStatus("reserved");
+        confirmDialog.setConfirmText("Réserver");
+        confirmDialog.addConfirmListener(event -> {
+            // Create the reservation
+            ReservationDto newReservation = new ReservationDto();
+            newReservation.setCopy(availableCopy.get());
+            newReservation.setMember(currentUser);
+            newReservation.setReservationDate(LocalDate.now());
+            newReservation.setStatus("reserved");
 
             try {
-                reservationService.save(reservation);
+                reservationService.save(newReservation);
 
                 // Update copy status
                 CopyDto copy = availableCopy.get();
                 copy.setStatus("reserved");
                 copyService.save(copy);
 
-                // Update user's reservation count
-                currentReservations++;
-
-                // Show success message
                 Notification.show(
-                        "Réservation effectuée avec succès !",
-                        5000,
+                        "Réservation effectuée avec succès",
+                        3000,
                         Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
-                // Update UI
-                loadCurrentUserInfo();
+                // Refresh the grid to show updated availability
+                updateResults();
 
-                // Close dialogs
-                confirmDialog.close();
-                detailsDialog.close();
-
-                // Refresh search results
-                searchItems();
-
-            } catch (Exception ex) {
+            } catch (Exception e) {
                 Notification.show(
-                        "Erreur lors de la réservation: " + ex.getMessage(),
+                        "Erreur lors de la réservation: " + e.getMessage(),
                         5000,
                         Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         });
 
-        Button cancelButton = new Button("Annuler");
-        cancelButton.addClickListener(e -> confirmDialog.close());
-
-        HorizontalLayout buttonLayout = new HorizontalLayout(confirmButton, cancelButton);
-        buttonLayout.setSpacing(true);
-
-        confirmLayout.add(buttonLayout);
-        confirmDialog.add(confirmLayout);
-
         confirmDialog.open();
+    }
+
+    private int getMaxReservationsForUser() {
+        // Get default reservation limits
+        Optional<LoanSettingDto> settings = loanSettingService.findById(1L);
+
+        // Use default limits based on whether user is a child or adult
+        int defaultLimit = 0;
+        if (settings.isPresent()) {
+            defaultLimit = Boolean.TRUE.equals(currentUser.getIsChild())
+                    ? settings.get().getMaxReservationsChild()
+                    : settings.get().getMaxReservationsAdult();
+        } else {
+            // Fallback values if settings not found
+            defaultLimit = Boolean.TRUE.equals(currentUser.getIsChild()) ? 3 : 5;
+        }
+
+        // Check for special limits
+        User userEntity = new User();
+        userEntity.setId(currentUser.getId());
+
+        Optional<SpecialLimitDto> specialLimit = specialLimitService.findActiveByUser(userEntity);
+        if (specialLimit.isPresent()) {
+            return specialLimit.get().getMaxReservations();
+        }
+
+        return defaultLimit;
     }
 }

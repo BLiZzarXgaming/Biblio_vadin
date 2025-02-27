@@ -6,8 +6,8 @@ import com.example.application.service.implementation.*;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -18,306 +18,450 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.tabs.Tab;
-import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.provider.DataProvider;
-import com.vaadin.flow.data.value.ValueChangeMode;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @PageTitle("Gestion du Catalogue")
-@Route(value = "volunteer/catalog-management", layout = MainLayout.class)
+@Route(value = "volunteer/catalogue-management", layout = MainLayout.class)
 @RolesAllowed("ROLE_BÉNÉVOLE")
 public class BenevoleCatalogueView extends VerticalLayout {
+    private ComboBox<String> typeComboBox;
+    private FormLayout searchFieldsLayout;
+
+    private Button searchButton;
+    private Button clearButton;
+
+    private Grid<ItemDto> resultsGrid;
 
     // Services
-    private final ItemServiceV2 itemService;
-    private final BookServiceV2 bookService;
-    private final MagazineServiceV2 magazineService;
-    private final BoardGameServiceV2 boardGameService;
-    private final CategoryServiceV2 categoryService;
-    private final PublisherServiceV2 publisherService;
-    private final CopyServiceV2 copyService;
-    private final SupplierServiceV2 supplierService;
+    private ItemServiceV2 itemService;
+    private PublisherServiceV2 publisherService;
+    private CategoryServiceV2 categoryService;
+    private SupplierServiceV2 supplierService;
+    private BookServiceV2 bookService;
+    private MagazineServiceV2 magazineService;
+    private BoardGameServiceV2 boardGameService;
+    private CopyServiceV2 copyService;
 
-    // UI Components
-    private TextField searchField;
-    private ComboBox<String> typeFilter;
-    private ComboBox<CategoryDto> categoryFilter;
-    private Grid<ItemDto> resultsGrid;
-    private Button searchButton;
-    private Button resetButton;
-    private Button addDocumentButton;
+    // Pagination
+    private int pageSize = 10;
+    private int currentPage = 0;
+    private Span paginationInfo;
+    private Button prevButton;
+    private Button nextButton;
+
+    // Search criteria
+    private String selectedType;
+    private Map<String, Object> searchCriteria = new HashMap<>();
+
+    // Search fields
+    private TextField titleField;
+    private TextField authorField;
+    private TextField isbnField;
+    private DatePicker publicationDateField;
+    private ComboBox<CategoryDto> categoryComboBox;
+    private ComboBox<PublisherDto> publisherComboBox;
+
+    private TextField keywordField;
+
+    private TextField isniField;
+    private ComboBox<MoisOption> monthComboBox;
+    private IntegerField yearField;
+
+    private IntegerField numberOfPiecesField;
+    private IntegerField recommendedAgeField;
+    private TextField gtinField;
 
     public BenevoleCatalogueView(ItemServiceV2 itemService,
+            PublisherServiceV2 publisherService,
+            CategoryServiceV2 categoryService,
+            SupplierServiceV2 supplierService,
             BookServiceV2 bookService,
             MagazineServiceV2 magazineService,
             BoardGameServiceV2 boardGameService,
-            CategoryServiceV2 categoryService,
-            PublisherServiceV2 publisherService,
-            CopyServiceV2 copyService,
-            SupplierServiceV2 supplierService) {
+            CopyServiceV2 copyService) {
         this.itemService = itemService;
+        this.publisherService = publisherService;
+        this.categoryService = categoryService;
+        this.supplierService = supplierService;
         this.bookService = bookService;
         this.magazineService = magazineService;
         this.boardGameService = boardGameService;
-        this.categoryService = categoryService;
-        this.publisherService = publisherService;
         this.copyService = copyService;
-        this.supplierService = supplierService;
 
-        setSizeFull();
-        setPadding(true);
-        setSpacing(true);
+        setWidth("100%");
+        getStyle().set("flex-grow", "1");
+        setHeight("100%");
 
-        // Create components
-        createHeader();
-        createSearchBar();
-        createResultsGrid();
-
-        // Initial search with empty criteria
-        searchItems();
-    }
-
-    private void createHeader() {
         H2 title = new H2("Gestion du Catalogue");
+        add(title);
 
-        addDocumentButton = new Button("Ajouter un document", new Icon(VaadinIcon.PLUS));
-        addDocumentButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        addDocumentButton.addClickListener(e -> navigateToAddDocument());
-
-        HorizontalLayout headerLayout = new HorizontalLayout(title, addDocumentButton);
-        headerLayout.setWidthFull();
-        headerLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
-        headerLayout.setAlignItems(FlexComponent.Alignment.CENTER);
-
-        add(headerLayout);
+        configureComponents();
     }
 
-    private void navigateToAddDocument() {
-        // Redirect to the BenevoleAjouterView
-        getUI().ifPresent(ui -> ui.navigate("volunteer/add"));
-    }
+    private void configureComponents() {
+        // Initialisation des composants
+        typeComboBox = new ComboBox<>("Type de document");
+        typeComboBox.setItems("Tous", "Livre", "Revue", "Jeu");
+        typeComboBox.setValue("Tous");
 
-    private void createSearchBar() {
-        HorizontalLayout searchLayout = new HorizontalLayout();
-        searchLayout.setWidthFull();
-        searchLayout.setAlignItems(Alignment.BASELINE);
+        searchFieldsLayout = new FormLayout();
+        searchFieldsLayout.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2),
+                new FormLayout.ResponsiveStep("800px", 3));
 
-        // Search field
-        searchField = new TextField();
-        searchField.setPlaceholder("Rechercher par titre, auteur, ISBN, etc.");
-        searchField.setClearButtonVisible(true);
-        searchField.setValueChangeMode(ValueChangeMode.EAGER);
-        searchField.setWidthFull();
-
-        // Type filter
-        typeFilter = new ComboBox<>("Type");
-        typeFilter.setItems("Tous", "Livre", "Revue", "Jeu");
-        typeFilter.setValue("Tous");
-        typeFilter.setWidth("150px");
-
-        // Category filter
-        categoryFilter = new ComboBox<>("Catégorie");
-        categoryFilter.setItems(categoryService.findAll());
-        categoryFilter.setItemLabelGenerator(CategoryDto::getName);
-        categoryFilter.setWidth("200px");
-
-        // Search button
-        searchButton = new Button("Rechercher");
+        searchButton = new Button("Rechercher", e -> searchItems());
         searchButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        searchButton.addClickListener(e -> searchItems());
 
-        // Reset button
-        resetButton = new Button("Réinitialiser");
-        resetButton.addClickListener(e -> {
-            searchField.clear();
-            typeFilter.setValue("Tous");
-            categoryFilter.clear();
-            searchItems();
+        clearButton = new Button("Réinitialiser", e -> clearSearchFields());
+        clearButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+        // Add document button
+        Button addDocumentButton = new Button("Ajouter un document", e -> {
+            // Navigate to the document addition view
+            getUI().ifPresent(ui -> ui.navigate("volunteer/add"));
+        });
+        addDocumentButton.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
+
+        HorizontalLayout actionBar = new HorizontalLayout(searchButton, clearButton, addDocumentButton);
+        actionBar.setSpacing(true);
+
+        add(createSearchLayout(), actionBar);
+        configureGrid();
+        configurePagination();
+    }
+
+    private void configurePagination() {
+        paginationInfo = new Span("Page 1");
+
+        prevButton = new Button(new Icon(VaadinIcon.ARROW_LEFT), e -> {
+            if (currentPage > 0) {
+                currentPage--;
+                updateResults();
+            }
+        });
+        prevButton.setEnabled(false);
+
+        nextButton = new Button(new Icon(VaadinIcon.ARROW_RIGHT), e -> {
+            currentPage++;
+            updateResults();
         });
 
-        searchLayout.add(searchField, typeFilter, categoryFilter, searchButton, resetButton);
-        searchLayout.setFlexGrow(1, searchField);
+        HorizontalLayout paginationLayout = new HorizontalLayout(prevButton, paginationInfo, nextButton);
+        paginationLayout.setAlignItems(Alignment.CENTER);
+        paginationLayout.setJustifyContentMode(JustifyContentMode.CENTER);
 
-        add(searchLayout);
+        add(paginationLayout);
     }
 
-    private void createResultsGrid() {
-        resultsGrid = new Grid<>();
-        resultsGrid.addColumn(ItemDto::getTitle).setHeader("Titre").setSortable(true).setAutoWidth(true).setFlexGrow(1);
+    private VerticalLayout createSearchLayout() {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setSpacing(false);
+        layout.setPadding(false);
 
-        // Type column with human-readable values
-        resultsGrid.addColumn(item -> {
-            String type = item.getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
-        }).setHeader("Type").setSortable(true).setAutoWidth(true);
+        // Listener pour adapter les inputs en fonction du type
+        typeComboBox.addValueChangeListener(e -> updateSearchFields());
 
-        resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setSortable(true)
-                .setAutoWidth(true);
-        resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur").setSortable(true)
-                .setAutoWidth(true);
+        // Initialisation des champs de recherche
+        updateSearchFields();
 
-        // Copies info column
-        resultsGrid.addColumn(item -> {
-            List<CopyDto> copies = copyService.findByItem(item.getId());
-            return copies.size() + " exemplaire(s)";
-        }).setHeader("Exemplaires").setAutoWidth(true);
+        layout.add(typeComboBox, searchFieldsLayout);
+        return layout;
+    }
 
-        // Available copies column
-        resultsGrid.addColumn(item -> {
-            List<CopyDto> copies = copyService.findByItem(item.getId());
-            long availableCount = copies.stream().filter(c -> "available".equals(c.getStatus())).count();
-            return availableCount + " disponible(s)";
-        }).setHeader("Disponibles").setAutoWidth(true);
+    private void updateCategoryComboBox() {
+        List<CategoryDto> categories = categoryService.findAll();
+        categoryComboBox.setItems(categories);
+        categoryComboBox.setItemLabelGenerator(CategoryDto::getName);
+    }
 
-        // Action buttons column
-        resultsGrid.addComponentColumn(item -> {
-            HorizontalLayout actionButtons = new HorizontalLayout();
+    private void updatePublisherComboBox() {
+        List<PublisherDto> publishers = publisherService.findAll();
+        publisherComboBox.setItems(publishers);
+        publisherComboBox.setItemLabelGenerator(PublisherDto::getName);
+    }
 
-            Button editButton = new Button("Éditer");
-            editButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-            editButton.addClickListener(e -> editItemDetails(item));
+    private void updateSearchFields() {
+        searchFieldsLayout.removeAll();
 
-            Button copyButton = new Button("Exemplaires");
-            copyButton.addClickListener(e -> manageCopies(item));
+        selectedType = typeComboBox.getValue();
 
-            Button deleteButton = new Button("Supprimer");
-            deleteButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
-            deleteButton.addClickListener(e -> confirmDeleteItem(item));
+        if ("Livre".equals(selectedType)) {
+            createBookSearchFields();
+        } else if ("Revue".equals(selectedType)) {
+            createMagazineSearchFields();
+        } else if ("Jeu".equals(selectedType)) {
+            createGameSearchFields();
+        } else {
+            createGeneralSearchFields();
+        }
+    }
 
-            actionButtons.add(editButton, copyButton, deleteButton);
-            actionButtons.setSpacing(true);
+    private void createBookSearchFields() {
+        searchCriteria.clear();
 
-            return actionButtons;
-        }).setHeader("Actions").setAutoWidth(true);
+        titleField = new TextField("Titre");
+        authorField = new TextField("Auteur");
+        isbnField = new TextField("ISBN");
+        publicationDateField = new DatePicker("Date de Publication");
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
 
-        resultsGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
-        resultsGrid.setHeight("600px");
+        updateCategoryComboBox();
+        updatePublisherComboBox();
 
-        // Double-click to edit
-        resultsGrid.addItemDoubleClickListener(event -> editItemDetails(event.getItem()));
+        searchFieldsLayout.add(titleField, authorField, isbnField, publicationDateField, categoryComboBox,
+                publisherComboBox);
+    }
 
-        add(resultsGrid);
-        setFlexGrow(1, resultsGrid);
+    private void createMagazineSearchFields() {
+        searchCriteria.clear();
+
+        titleField = new TextField("Titre");
+        isniField = new TextField("ISNI");
+        monthComboBox = new ComboBox<>("Mois de Publication");
+        yearField = new IntegerField("Année");
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
+
+        List<MoisOption> listeDesMois = MoisOption.getListeMois();
+        monthComboBox.setItems(listeDesMois);
+        monthComboBox.setItemLabelGenerator(MoisOption::getNom);
+
+        updateCategoryComboBox();
+        updatePublisherComboBox();
+
+        searchFieldsLayout.add(titleField, isniField, monthComboBox, yearField, categoryComboBox, publisherComboBox);
+    }
+
+    private void createGameSearchFields() {
+        searchCriteria.clear();
+
+        titleField = new TextField("Titre");
+        numberOfPiecesField = new IntegerField("Nombre de Pièces");
+        recommendedAgeField = new IntegerField("Âge Recommandé");
+        gtinField = new TextField("GTIN");
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
+
+        updateCategoryComboBox();
+        updatePublisherComboBox();
+
+        searchFieldsLayout.add(titleField, numberOfPiecesField, recommendedAgeField, gtinField, categoryComboBox,
+                publisherComboBox);
+    }
+
+    private void createGeneralSearchFields() {
+        searchCriteria.clear();
+
+        keywordField = new TextField("Mot-clé");
+        keywordField.setPlaceholder("Rechercher par titre, auteur, etc.");
+        keywordField.setClearButtonVisible(true);
+
+        categoryComboBox = new ComboBox<>("Catégorie");
+        publisherComboBox = new ComboBox<>("Éditeur");
+
+        updateCategoryComboBox();
+        updatePublisherComboBox();
+
+        searchFieldsLayout.add(keywordField, categoryComboBox, publisherComboBox);
     }
 
     private void searchItems() {
-        String searchTerm = searchField.getValue();
-        String selectedType = typeFilter.getValue();
-        CategoryDto selectedCategory = categoryFilter.getValue();
+        selectedType = typeComboBox.getValue();
+        searchCriteria.clear();
+        currentPage = 0;
 
-        // Convert UI type to backend type
-        String backendType = null;
-        if (!"Tous".equals(selectedType)) {
-            backendType = switch (selectedType) {
-                case "Livre" -> "book";
-                case "Revue" -> "magazine";
-                case "Jeu" -> "board_game";
-                default -> null;
-            };
+        if ("Livre".equals(selectedType)) {
+            searchCriteria.put("title", titleField.getValue());
+            searchCriteria.put("author", authorField.getValue());
+            searchCriteria.put("isbn", isbnField.getValue());
+            searchCriteria.put("publicationDate", publicationDateField.getValue());
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
+        } else if ("Revue".equals(selectedType)) {
+            searchCriteria.put("title", titleField.getValue());
+            searchCriteria.put("isni", isniField.getValue());
+            if (monthComboBox.getValue() != null) {
+                searchCriteria.put("month", monthComboBox.getValue().getNumero());
+            } else {
+                searchCriteria.put("month", "");
+            }
+            searchCriteria.put("year", yearField != null ? yearField.getValue() : null);
+            searchCriteria.put("publicationDate", null);
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
+        } else if ("Jeu".equals(selectedType)) {
+            searchCriteria.put("title", titleField.getValue());
+            searchCriteria.put("numberOfPieces", numberOfPiecesField.getValue());
+            searchCriteria.put("recommendedAge", recommendedAgeField.getValue());
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
+            searchCriteria.put("gtin", gtinField.getValue());
+        } else {
+            searchCriteria.put("keyword", keywordField.getValue());
+            searchCriteria.put("category", categoryComboBox.getValue());
+            searchCriteria.put("publisher", publisherComboBox.getValue());
         }
 
-        // Build search criteria
-        java.util.Map<String, Object> searchCriteria = new java.util.HashMap<>();
+        updateResults();
+    }
 
-        if (searchTerm != null && !searchTerm.isEmpty()) {
-            searchCriteria.put("keyword", searchTerm);
-        }
+    private void updateResults() {
+        int offset = currentPage * pageSize;
 
-        if (selectedCategory != null) {
-            searchCriteria.put("category", selectedCategory);
-        }
+        resultsGrid.setItems(query -> {
+            int limit = query.getLimit();
+            List<ItemDto> items = itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit);
 
-        // Execute search
-        List<ItemDto> results = itemService.fetchItemsWithFilters(searchCriteria, selectedType, 0, 1000);
+            // Disable/enable pagination buttons
+            prevButton.setEnabled(currentPage > 0);
+            nextButton.setEnabled(items.size() == pageSize);
 
-        // Update grid
-        resultsGrid.setItems(results);
+            // Update pagination info
+            paginationInfo.setText("Page " + (currentPage + 1));
 
-        // Show message if no results
-        if (results.isEmpty()) {
-            Notification.show("Aucun résultat trouvé pour cette recherche", 3000, Notification.Position.MIDDLE);
-        }
+            return items.stream();
+        });
+
+        // Scroll to top of results
+        resultsGrid.scrollToStart();
+    }
+
+    private void clearSearchFields() {
+        typeComboBox.setValue("Tous");
+        updateSearchFields();
+        searchCriteria.clear();
+        currentPage = 0;
+        updateResults();
+    }
+
+    private String translateType(String type) {
+        return switch (type) {
+            case "book" -> "Livre";
+            case "magazine" -> "Revue";
+            case "board_game" -> "Jeu";
+            default -> type;
+        };
+    }
+
+    private void configureGrid() {
+        resultsGrid = new Grid<>();
+        resultsGrid.setSizeFull();
+        resultsGrid.addClassName("catalogue-grid");
+
+        resultsGrid.removeAllColumns();
+        resultsGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
+        resultsGrid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
+
+        resultsGrid.addColumn(ItemDto::getTitle).setHeader("Titre").setResizable(true).setAutoWidth(true)
+                .setFlexGrow(1);
+        resultsGrid.addColumn(item -> translateType(item.getType())).setHeader("Type").setResizable(true)
+                .setAutoWidth(true);
+        resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setResizable(true)
+                .setAutoWidth(true);
+        resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur").setResizable(true)
+                .setAutoWidth(true);
+
+        // Add copies status column
+        resultsGrid.addColumn(new ComponentRenderer<>(item -> {
+            List<CopyDto> copies = copyService.findByItem(item.getId());
+
+            HorizontalLayout badgesLayout = new HorizontalLayout();
+            badgesLayout.setSpacing(true);
+
+            long availableCount = copies.stream()
+                    .filter(copy -> "available".equals(copy.getStatus()))
+                    .count();
+
+            long totalCount = copies.size();
+
+            if (totalCount == 0) {
+                Span noCopies = new Span("Aucun exemplaire");
+                noCopies.getElement().getThemeList().add("badge");
+                noCopies.getElement().getThemeList().add("error");
+                badgesLayout.add(noCopies);
+            } else {
+                Span availableBadge = new Span(availableCount + " / " + totalCount);
+                availableBadge.getElement().getThemeList().add("badge");
+
+                if (availableCount > 0) {
+                    availableBadge.getElement().getThemeList().add("success");
+                } else {
+                    availableBadge.getElement().getThemeList().add("error");
+                }
+
+                badgesLayout.add(availableBadge);
+            }
+
+            return badgesLayout;
+        })).setHeader("Exemplaires").setAutoWidth(true);
+
+        // Action column
+        resultsGrid.addComponentColumn(item -> {
+            HorizontalLayout actionsLayout = new HorizontalLayout();
+            actionsLayout.setSpacing(true);
+
+            // Edit button
+            Button editButton = new Button(new Icon(VaadinIcon.EDIT), e -> editItemDetails(item));
+            editButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
+            editButton.getElement().setAttribute("title", "Modifier");
+
+            // Manage copies button
+            Button copiesButton = new Button(new Icon(VaadinIcon.COPY), e -> manageCopies(item));
+            copiesButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
+            copiesButton.getElement().setAttribute("title", "Gérer les exemplaires");
+
+            // Delete button
+            Button deleteButton = new Button(new Icon(VaadinIcon.TRASH), e -> confirmDeleteItem(item));
+            deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR,
+                    ButtonVariant.LUMO_TERTIARY);
+            deleteButton.getElement().setAttribute("title", "Supprimer");
+
+            actionsLayout.add(editButton, copiesButton, deleteButton);
+            return actionsLayout;
+        }).setHeader("Actions").setAutoWidth(true);
+
+        resultsGrid.setPageSize(pageSize);
+        resultsGrid.setHeight("70vh");
+
+        // Initial items load
+        resultsGrid.setItems(query -> {
+            int limit = query.getLimit();
+            return itemService.fetchItemsWithFilters(searchCriteria, selectedType, 0, limit).stream();
+        });
+
+        add(resultsGrid);
     }
 
     private void editItemDetails(ItemDto item) {
         Dialog dialog = new Dialog();
-        dialog.setWidth("900px");
-        dialog.setHeight("700px");
+        dialog.setWidth("800px");
         dialog.setDraggable(true);
         dialog.setResizable(true);
-        dialog.setHeaderTitle("Modifier le document");
 
         VerticalLayout dialogLayout = new VerticalLayout();
         dialogLayout.setPadding(true);
         dialogLayout.setSpacing(true);
-        dialogLayout.setSizeFull();
 
-        // Create tabs for different sections
-        Tab basicInfoTab = new Tab("Informations générales");
-        Tab specificInfoTab = new Tab("Informations spécifiques");
+        H3 title = new H3("Modifier " + translateType(item.getType()));
 
-        Tabs tabs = new Tabs(basicInfoTab, specificInfoTab);
-        tabs.setWidthFull();
-
-        // Tab content containers
-        VerticalLayout basicInfoLayout = createBasicInfoForm(item);
-        VerticalLayout specificInfoLayout = createSpecificInfoForm(item);
-
-        // Initially show basic info
-        specificInfoLayout.setVisible(false);
-
-        // Tab change listener
-        tabs.addSelectedChangeListener(event -> {
-            basicInfoLayout.setVisible(event.getSelectedTab().equals(basicInfoTab));
-            specificInfoLayout.setVisible(event.getSelectedTab().equals(specificInfoTab));
-        });
-
-        // Bottom buttons
-        Button saveButton = new Button("Enregistrer");
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        saveButton.addClickListener(e -> {
-            saveItemChanges(item, basicInfoLayout, specificInfoLayout, dialog);
-        });
-
-        Button cancelButton = new Button("Annuler");
-        cancelButton.addClickListener(e -> dialog.close());
-
-        HorizontalLayout buttonLayout = new HorizontalLayout(saveButton, cancelButton);
-        buttonLayout.setSpacing(true);
-
-        dialogLayout.add(tabs, basicInfoLayout, specificInfoLayout, buttonLayout);
-        dialogLayout.setFlexGrow(1, basicInfoLayout);
-        dialogLayout.setFlexGrow(1, specificInfoLayout);
-
-        dialog.add(dialogLayout);
-        dialog.open();
-    }
-
-    private VerticalLayout createBasicInfoForm(ItemDto item) {
-        VerticalLayout layout = new VerticalLayout();
-        layout.setPadding(true);
-        layout.setSpacing(true);
-
+        // Basic item information
         FormLayout formLayout = new FormLayout();
         formLayout.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
@@ -327,325 +471,217 @@ public class BenevoleCatalogueView extends VerticalLayout {
         TextField titleField = new TextField("Titre");
         titleField.setValue(item.getTitle());
         titleField.setWidthFull();
-        titleField.setRequired(true);
-        titleField.setId("title-field");
 
-        // Type field (readonly as it can't be changed)
-        String typeLabel = switch (item.getType()) {
-            case "book" -> "Livre";
-            case "magazine" -> "Revue";
-            case "board_game" -> "Jeu";
-            default -> item.getType();
-        };
-        TextField typeField = new TextField("Type");
-        typeField.setValue(typeLabel);
-        typeField.setReadOnly(true);
-
-        // Category selector
+        // Category selection
         ComboBox<CategoryDto> categoryField = new ComboBox<>("Catégorie");
         categoryField.setItems(categoryService.findAll());
         categoryField.setItemLabelGenerator(CategoryDto::getName);
         categoryField.setValue(item.getCategory());
-        categoryField.setRequired(true);
-        categoryField.setId("category-field");
 
-        // Publisher selector
+        // Publisher selection
         ComboBox<PublisherDto> publisherField = new ComboBox<>("Éditeur");
         publisherField.setItems(publisherService.findAll());
         publisherField.setItemLabelGenerator(PublisherDto::getName);
         publisherField.setValue(item.getPublisher());
-        publisherField.setRequired(true);
-        publisherField.setId("publisher-field");
-
-        // Value field
-        TextField valueField = new TextField("Valeur");
-        valueField.setValue(item.getValue().toString());
-        valueField.setId("value-field");
 
         // Link field
         TextField linkField = new TextField("Lien externe");
-        if (item.getLink() != null) {
-            linkField.setValue(item.getLink());
-        }
-        linkField.setId("link-field");
+        linkField.setValue(item.getLink() != null ? item.getLink() : "");
+        linkField.setWidthFull();
 
-        // Add fields to form
-        formLayout.add(titleField, typeField, categoryField, publisherField, valueField, linkField);
+        formLayout.add(titleField, categoryField, publisherField, linkField);
 
-        layout.add(formLayout);
-        return layout;
-    }
-
-    private VerticalLayout createSpecificInfoForm(ItemDto item) {
-        VerticalLayout layout = new VerticalLayout();
-        layout.setPadding(true);
-        layout.setSpacing(true);
-
-        FormLayout formLayout = new FormLayout();
-        formLayout.setResponsiveSteps(
+        // Type-specific fields
+        FormLayout specificFormLayout = new FormLayout();
+        specificFormLayout.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("500px", 2));
 
-        String itemType = item.getType();
-
-        if ("book".equals(itemType)) {
+        if ("book".equals(item.getType())) {
             Optional<BookDto> book = bookService.findById(item.getId());
             if (book.isPresent()) {
                 BookDto bookData = book.get();
 
                 TextField authorField = new TextField("Auteur");
                 authorField.setValue(bookData.getAuthor());
-                authorField.setRequired(true);
-                authorField.setId("author-field");
 
                 TextField isbnField = new TextField("ISBN");
                 isbnField.setValue(bookData.getIsbn());
-                isbnField.setReadOnly(true); // ISBN is a unique identifier, shouldn't be changed
+                isbnField.setReadOnly(true); // ISBN shouldn't be changed
 
-                DatePicker pubDateField = new DatePicker("Date de publication");
-                pubDateField.setValue(bookData.getPublicationDate());
-                pubDateField.setRequired(true);
-                pubDateField.setId("pub-date-field");
+                DatePicker publicationDateField = new DatePicker("Date de publication");
+                publicationDateField.setValue(bookData.getPublicationDate());
 
-                formLayout.add(authorField, isbnField, pubDateField);
+                specificFormLayout.add(authorField, isbnField, publicationDateField);
+
+                // Save button action
+                Button saveButton = new Button("Enregistrer", e -> {
+                    // Update item data
+                    item.setTitle(titleField.getValue());
+                    item.setCategory(categoryField.getValue());
+                    item.setPublisher(publisherField.getValue());
+                    item.setLink(linkField.getValue());
+
+                    // Update book data
+                    bookData.setAuthor(authorField.getValue());
+                    bookData.setPublicationDate(publicationDateField.getValue());
+
+                    // Save changes
+                    try {
+                        itemService.save(item);
+                        bookService.save(bookData);
+
+                        Notification.show("Document mis à jour avec succès",
+                                3000, Notification.Position.MIDDLE)
+                                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+                        dialog.close();
+                        updateResults();
+                    } catch (Exception ex) {
+                        Notification.show("Erreur lors de la mise à jour: " + ex.getMessage(),
+                                5000, Notification.Position.MIDDLE)
+                                .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    }
+                });
+                saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+                Button cancelButton = new Button("Annuler", e -> dialog.close());
+                cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+                HorizontalLayout buttonsLayout = new HorizontalLayout(saveButton, cancelButton);
+                buttonsLayout.setSpacing(true);
+
+                dialogLayout.add(title, formLayout, specificFormLayout, buttonsLayout);
             }
-        } else if ("magazine".equals(itemType)) {
+        } else if ("magazine".equals(item.getType())) {
             Optional<MagazineDto> magazine = magazineService.findById(item.getId());
             if (magazine.isPresent()) {
                 MagazineDto magazineData = magazine.get();
 
                 TextField isniField = new TextField("ISNI");
                 isniField.setValue(magazineData.getIsni());
-                isniField.setReadOnly(true); // ISNI is a unique identifier
+                isniField.setReadOnly(true); // ISNI shouldn't be changed
 
                 ComboBox<MoisOption> monthField = new ComboBox<>("Mois");
                 monthField.setItems(MoisOption.getListeMois());
                 monthField.setItemLabelGenerator(MoisOption::getNom);
+                monthField.setValue(MoisOption.getListeMois().stream()
+                        .filter(m -> m.getNumero().equals(magazineData.getMonth()))
+                        .findFirst().orElse(null));
+                monthField.setReadOnly(true); // Month shouldn't be changed
 
-                // Find the month option
-                Optional<MoisOption> selectedMonth = MoisOption.getListeMois().stream()
-                        .filter(m -> m.getNom().equals(magazineData.getMonth()))
-                        .findFirst();
-                selectedMonth.ifPresent(monthField::setValue);
-                monthField.setReadOnly(true); // Month is part of unique identifier
+                IntegerField yearField = new IntegerField("Année");
+                yearField.setValue(Integer.parseInt(magazineData.getYear()));
+                yearField.setReadOnly(true); // Year shouldn't be changed
 
-                TextField yearField = new TextField("Année");
-                yearField.setValue(magazineData.getYear());
-                yearField.setReadOnly(true); // Year is part of unique identifier
+                DatePicker publicationDateField = new DatePicker("Date de publication");
+                publicationDateField.setValue(magazineData.getPublicationDate());
 
-                DatePicker pubDateField = new DatePicker("Date de publication");
-                pubDateField.setValue(magazineData.getPublicationDate());
-                pubDateField.setRequired(true);
-                pubDateField.setId("pub-date-field");
+                specificFormLayout.add(isniField, monthField, yearField, publicationDateField);
 
-                formLayout.add(isniField, monthField, yearField, pubDateField);
+                // Save button action
+                Button saveButton = new Button("Enregistrer", e -> {
+                    // Update item data
+                    item.setTitle(titleField.getValue());
+                    item.setCategory(categoryField.getValue());
+                    item.setPublisher(publisherField.getValue());
+                    item.setLink(linkField.getValue());
+
+                    // Update magazine data
+                    magazineData.setPublicationDate(publicationDateField.getValue());
+
+                    // Save changes
+                    try {
+                        itemService.save(item);
+                        magazineService.save(magazineData);
+
+                        Notification.show("Document mis à jour avec succès",
+                                3000, Notification.Position.MIDDLE)
+                                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+                        dialog.close();
+                        updateResults();
+                    } catch (Exception ex) {
+                        Notification.show("Erreur lors de la mise à jour: " + ex.getMessage(),
+                                5000, Notification.Position.MIDDLE)
+                                .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    }
+                });
+                saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+                Button cancelButton = new Button("Annuler", e -> dialog.close());
+                cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+                HorizontalLayout buttonsLayout = new HorizontalLayout(saveButton, cancelButton);
+                buttonsLayout.setSpacing(true);
+
+                dialogLayout.add(title, formLayout, specificFormLayout, buttonsLayout);
             }
-        } else if ("board_game".equals(itemType)) {
+        } else if ("board_game".equals(item.getType())) {
             Optional<BoardGameDto> boardGame = boardGameService.findById(item.getId());
             if (boardGame.isPresent()) {
                 BoardGameDto gameData = boardGame.get();
 
                 IntegerField piecesField = new IntegerField("Nombre de pièces");
                 piecesField.setValue(gameData.getNumberOfPieces());
-                piecesField.setRequired(true);
-                piecesField.setId("pieces-field");
 
                 IntegerField ageField = new IntegerField("Âge recommandé");
                 ageField.setValue(gameData.getRecommendedAge());
-                ageField.setRequired(true);
-                ageField.setId("age-field");
 
                 TextField gtinField = new TextField("GTIN");
                 gtinField.setValue(gameData.getGtin());
-                gtinField.setReadOnly(true); // GTIN is a unique identifier
+                gtinField.setReadOnly(true); // GTIN shouldn't be changed
 
                 TextArea rulesField = new TextArea("Règles du jeu");
                 rulesField.setValue(gameData.getGameRules());
-                rulesField.setMinHeight("200px");
-                rulesField.setId("rules-field");
+                rulesField.setHeight("150px");
 
-                formLayout.add(piecesField, ageField, gtinField);
+                specificFormLayout.add(piecesField, ageField, gtinField);
 
-                // Add rules as a full-width component
-                layout.add(formLayout, new H4("Règles du jeu"), rulesField);
-                return layout;
+                // Save button action
+                Button saveButton = new Button("Enregistrer", e -> {
+                    // Update item data
+                    item.setTitle(titleField.getValue());
+                    item.setCategory(categoryField.getValue());
+                    item.setPublisher(publisherField.getValue());
+                    item.setLink(linkField.getValue());
+
+                    // Update board game data
+                    gameData.setNumberOfPieces(piecesField.getValue());
+                    gameData.setRecommendedAge(ageField.getValue());
+                    gameData.setGameRules(rulesField.getValue());
+
+                    // Save changes
+                    try {
+                        itemService.save(item);
+                        boardGameService.save(gameData, true); // true means it's an update
+
+                        Notification.show("Document mis à jour avec succès",
+                                3000, Notification.Position.MIDDLE)
+                                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+                        dialog.close();
+                        updateResults();
+                    } catch (Exception ex) {
+                        Notification.show("Erreur lors de la mise à jour: " + ex.getMessage(),
+                                5000, Notification.Position.MIDDLE)
+                                .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    }
+                });
+                saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+                Button cancelButton = new Button("Annuler", e -> dialog.close());
+                cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+                HorizontalLayout buttonsLayout = new HorizontalLayout(saveButton, cancelButton);
+                buttonsLayout.setSpacing(true);
+
+                dialogLayout.add(title, formLayout, specificFormLayout, rulesField, buttonsLayout);
             }
         }
 
-        layout.add(formLayout);
-        return layout;
-    }
-
-    private void saveItemChanges(ItemDto item, VerticalLayout basicInfoLayout,
-            VerticalLayout specificInfoLayout, Dialog dialog) {
-        try {
-            // Update general item information
-            TextField titleField = (TextField) basicInfoLayout.getChildren()
-                    .filter(component -> component instanceof FormLayout)
-                    .findFirst()
-                    .orElseThrow()
-                    .getChildren()
-                    .filter(component -> component instanceof TextField)
-                    .filter(component -> "title-field".equals(component.getId().orElse("")))
-                    .findFirst()
-                    .orElseThrow();
-
-            ComboBox<CategoryDto> categoryField = (ComboBox<CategoryDto>) basicInfoLayout.getChildren()
-                    .filter(component -> component instanceof FormLayout)
-                    .findFirst()
-                    .orElseThrow()
-                    .getChildren()
-                    .filter(component -> component instanceof ComboBox<?>)
-                    .filter(component -> "category-field".equals(component.getId().orElse("")))
-                    .findFirst()
-                    .orElseThrow();
-
-            ComboBox<PublisherDto> publisherField = (ComboBox<PublisherDto>) basicInfoLayout.getChildren()
-                    .filter(component -> component instanceof FormLayout)
-                    .findFirst()
-                    .orElseThrow()
-                    .getChildren()
-                    .filter(component -> component instanceof ComboBox<?>)
-                    .filter(component -> "publisher-field".equals(component.getId().orElse("")))
-                    .findFirst()
-                    .orElseThrow();
-
-            TextField valueField = (TextField) basicInfoLayout.getChildren()
-                    .filter(component -> component instanceof FormLayout)
-                    .findFirst()
-                    .orElseThrow()
-                    .getChildren()
-                    .filter(component -> component instanceof TextField)
-                    .filter(component -> "value-field".equals(component.getId().orElse("")))
-                    .findFirst()
-                    .orElseThrow();
-
-            TextField linkField = (TextField) basicInfoLayout.getChildren()
-                    .filter(component -> component instanceof FormLayout)
-                    .findFirst()
-                    .orElseThrow()
-                    .getChildren()
-                    .filter(component -> component instanceof TextField)
-                    .filter(component -> "link-field".equals(component.getId().orElse("")))
-                    .findFirst()
-                    .orElseThrow();
-
-            // Update basic item data
-            item.setTitle(titleField.getValue());
-            item.setCategory(categoryField.getValue());
-            item.setPublisher(publisherField.getValue());
-            item.setValue(Double.parseDouble(valueField.getValue()));
-            item.setLink(linkField.getValue());
-
-            // Update type-specific data
-            String itemType = item.getType();
-            if ("book".equals(itemType)) {
-                Optional<BookDto> bookOptional = bookService.findById(item.getId());
-                if (bookOptional.isPresent()) {
-                    BookDto book = bookOptional.get();
-
-                    TextField authorField = (TextField) specificInfoLayout.getChildren()
-                            .filter(component -> component instanceof FormLayout)
-                            .findFirst()
-                            .orElseThrow()
-                            .getChildren()
-                            .filter(component -> component instanceof TextField)
-                            .filter(component -> "author-field".equals(component.getId().orElse("")))
-                            .findFirst()
-                            .orElseThrow();
-
-                    DatePicker pubDateField = (DatePicker) specificInfoLayout.getChildren()
-                            .filter(component -> component instanceof FormLayout)
-                            .findFirst()
-                            .orElseThrow()
-                            .getChildren()
-                            .filter(component -> component instanceof DatePicker)
-                            .filter(component -> "pub-date-field".equals(component.getId().orElse("")))
-                            .findFirst()
-                            .orElseThrow();
-
-                    book.setAuthor(authorField.getValue());
-                    book.setPublicationDate(pubDateField.getValue());
-                    book.setItem(item);
-
-                    bookService.save(book);
-                }
-            } else if ("magazine".equals(itemType)) {
-                Optional<MagazineDto> magazineOptional = magazineService.findById(item.getId());
-                if (magazineOptional.isPresent()) {
-                    MagazineDto magazine = magazineOptional.get();
-
-                    DatePicker pubDateField = (DatePicker) specificInfoLayout.getChildren()
-                            .filter(component -> component instanceof FormLayout)
-                            .findFirst()
-                            .orElseThrow()
-                            .getChildren()
-                            .filter(component -> component instanceof DatePicker)
-                            .filter(component -> "pub-date-field".equals(component.getId().orElse("")))
-                            .findFirst()
-                            .orElseThrow();
-
-                    magazine.setPublicationDate(pubDateField.getValue());
-                    magazine.setItem(item);
-
-                    magazineService.save(magazine);
-                }
-            } else if ("board_game".equals(itemType)) {
-                Optional<BoardGameDto> gameOptional = boardGameService.findById(item.getId());
-                if (gameOptional.isPresent()) {
-                    BoardGameDto game = gameOptional.get();
-
-                    IntegerField piecesField = (IntegerField) specificInfoLayout.getChildren()
-                            .filter(component -> component instanceof FormLayout)
-                            .findFirst()
-                            .orElseThrow()
-                            .getChildren()
-                            .filter(component -> component instanceof IntegerField)
-                            .filter(component -> "pieces-field".equals(component.getId().orElse("")))
-                            .findFirst()
-                            .orElseThrow();
-
-                    IntegerField ageField = (IntegerField) specificInfoLayout.getChildren()
-                            .filter(component -> component instanceof FormLayout)
-                            .findFirst()
-                            .orElseThrow()
-                            .getChildren()
-                            .filter(component -> component instanceof IntegerField)
-                            .filter(component -> "age-field".equals(component.getId().orElse("")))
-                            .findFirst()
-                            .orElseThrow();
-
-                    TextArea rulesField = (TextArea) specificInfoLayout.getChildren()
-                            .filter(component -> component instanceof TextArea)
-                            .filter(component -> "rules-field".equals(component.getId().orElse("")))
-                            .findFirst()
-                            .orElseThrow();
-
-                    game.setNumberOfPieces(piecesField.getValue());
-                    game.setRecommendedAge(ageField.getValue());
-                    game.setGameRules(rulesField.getValue());
-                    game.setItem(item);
-
-                    boardGameService.save(game, true);
-                }
-            }
-
-            // Save the item itself
-            itemService.save(item);
-
-            // Show success message
-            Notification.show("Document mis à jour avec succès", 3000, Notification.Position.MIDDLE)
-                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-
-            // Close dialog and refresh grid
-            dialog.close();
-            searchItems();
-
-        } catch (Exception e) {
-            Notification.show("Erreur lors de la mise à jour: " + e.getMessage(),
-                    5000, Notification.Position.MIDDLE)
-                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
-        }
+        dialog.add(dialogLayout);
+        dialog.open();
     }
 
     private void manageCopies(ItemDto item) {
@@ -654,282 +690,243 @@ public class BenevoleCatalogueView extends VerticalLayout {
         dialog.setHeight("600px");
         dialog.setDraggable(true);
         dialog.setResizable(true);
-        dialog.setHeaderTitle("Gestion des exemplaires - " + item.getTitle());
 
         VerticalLayout dialogLayout = new VerticalLayout();
-        dialogLayout.setPadding(true);
-        dialogLayout.setSpacing(true);
         dialogLayout.setSizeFull();
+        dialogLayout.setPadding(true);
 
-        // Get copies of this item
-        List<CopyDto> copies = copyService.findByItem(item.getId());
+        H3 title = new H3("Gestion des exemplaires - " + item.getTitle());
 
-        // Summary info
-        H4 summaryTitle = new H4("Exemplaires");
-        long totalCopies = copies.size();
-        long availableCopies = copies.stream().filter(copy -> "available".equals(copy.getStatus())).count();
-        long borrowedCopies = copies.stream().filter(copy -> "borrowed".equals(copy.getStatus())).count();
-        long reservedCopies = copies.stream().filter(copy -> "reserved".equals(copy.getStatus())).count();
-        long unavailableCopies = copies.stream().filter(copy -> "unavailable".equals(copy.getStatus())).count();
-
-        Paragraph summary = new Paragraph(
-                String.format("Total: %d | Disponibles: %d | Empruntés: %d | Réservés: %d | Indisponibles: %d",
-                        totalCopies, availableCopies, borrowedCopies, reservedCopies, unavailableCopies));
-
-        // Copies grid
+        // List of copies
         Grid<CopyDto> copiesGrid = new Grid<>();
-        copiesGrid.setItems(copies);
+        copiesGrid.setHeightFull();
 
-        copiesGrid.addColumn(CopyDto::getId).setHeader("ID").setSortable(true).setWidth("80px").setFlexGrow(0);
-
+        copiesGrid.addColumn(CopyDto::getId).setHeader("ID").setAutoWidth(true);
         copiesGrid.addColumn(copy -> {
-            String status = copy.getStatus();
-            return switch (status) {
-                case "available" -> "Disponible";
-                case "borrowed" -> "Emprunté";
-                case "reserved" -> "Réservé";
-                case "unavailable" -> "Indisponible";
-                default -> status;
-            };
-        }).setHeader("Statut").setSortable(true).setWidth("120px").setFlexGrow(0);
+            return copy.getAcquisitionDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        }).setHeader("Date d'acquisition").setAutoWidth(true);
+        copiesGrid.addColumn(CopyDto::getPrice).setHeader("Prix").setAutoWidth(true);
 
-        copiesGrid.addColumn(copy -> {
-            if (copy.getAcquisitionDate() != null) {
-                return copy.getAcquisitionDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        // Status column with badge
+        copiesGrid.addColumn(new ComponentRenderer<>(copy -> {
+            Span statusBadge = new Span(translateStatus(copy.getStatus()));
+            statusBadge.getElement().getThemeList().add("badge");
+
+            if ("available".equals(copy.getStatus())) {
+                statusBadge.getElement().getThemeList().add("success");
+            } else if ("deleted".equals(copy.getStatus())) {
+                statusBadge.getElement().getThemeList().add("error");
+            } else {
+                statusBadge.getElement().getThemeList().add("contrast");
             }
-            return "";
-        }).setHeader("Date d'acquisition").setSortable(true).setWidth("150px").setFlexGrow(0);
 
-        copiesGrid.addColumn(CopyDto::getPrice).setHeader("Prix").setSortable(true).setWidth("100px").setFlexGrow(0);
+            return statusBadge;
+        })).setHeader("État").setAutoWidth(true);
 
-        // Action buttons
+        // Actions column
         copiesGrid.addComponentColumn(copy -> {
             HorizontalLayout actions = new HorizontalLayout();
 
+            // Status toggle button
             Button toggleStatusButton;
             if ("available".equals(copy.getStatus())) {
-                toggleStatusButton = new Button("Marquer indisponible");
-                toggleStatusButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
-                toggleStatusButton.addClickListener(e -> updateCopyStatus(copy, "unavailable", copiesGrid));
-            } else if ("unavailable".equals(copy.getStatus())) {
-                toggleStatusButton = new Button("Marquer disponible");
-                toggleStatusButton.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
-                toggleStatusButton.addClickListener(e -> updateCopyStatus(copy, "available", copiesGrid));
+                toggleStatusButton = new Button("Désactiver", e -> {
+                    changeCopyStatus(copy, "unavailable");
+                    refreshCopiesGrid(copiesGrid, item);
+                });
+                toggleStatusButton.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_SMALL);
+            } else if ("unavailable".equals(copy.getStatus()) || "deleted".equals(copy.getStatus())) {
+                toggleStatusButton = new Button("Activer", e -> {
+                    changeCopyStatus(copy, "available");
+                    refreshCopiesGrid(copiesGrid, item);
+                });
+                toggleStatusButton.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
             } else {
-                // For borrowed or reserved, we show an inactive button
-                toggleStatusButton = new Button(
-                        "borrowed".equals(copy.getStatus()) ? "Emprunté" : "Réservé");
+                // For borrowed or reserved copies, can't change status directly
+                toggleStatusButton = new Button("Indisponible");
                 toggleStatusButton.setEnabled(false);
+                toggleStatusButton.addThemeVariants(ButtonVariant.LUMO_SMALL);
             }
 
-            actions.add(toggleStatusButton);
+            // Delete button
+            Button deleteButton = new Button("Supprimer", e -> {
+                ConfirmDialog confirm = new ConfirmDialog();
+                confirm.setHeader("Confirmation");
+                confirm.setText("Êtes-vous sûr de vouloir supprimer définitivement cet exemplaire ?");
+                confirm.setCancelable(true);
+
+                confirm.setConfirmText("Supprimer");
+                confirm.addConfirmListener(event -> {
+                    changeCopyStatus(copy, "deleted");
+                    refreshCopiesGrid(copiesGrid, item);
+                });
+
+                confirm.setCancelText("Annuler");
+                confirm.open();
+            });
+            deleteButton.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_SMALL);
+
+            // Only allow delete if not borrowed or reserved
+            if ("borrowed".equals(copy.getStatus()) || "reserved".equals(copy.getStatus())) {
+                deleteButton.setEnabled(false);
+            }
+
+            actions.add(toggleStatusButton, deleteButton);
             return actions;
         }).setHeader("Actions").setAutoWidth(true);
 
-        copiesGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
-        copiesGrid.setHeight("350px");
+        // Load copies
+        refreshCopiesGrid(copiesGrid, item);
 
-        // Add new copy button
-        Button addCopyButton = new Button("Ajouter un exemplaire");
+        // Add new copy form
+        H4 addCopyTitle = new H4("Ajouter un exemplaire");
+
+        FormLayout addCopyForm = new FormLayout();
+        DatePicker acquisitionDateField = new DatePicker("Date d'acquisition");
+        acquisitionDateField.setValue(LocalDate.now());
+
+        TextField priceField = new TextField("Prix");
+        priceField.setPlaceholder("0.00");
+
+        Button addCopyButton = new Button("Ajouter", e -> {
+            if (acquisitionDateField.isEmpty() || priceField.isEmpty()) {
+                Notification.show("Veuillez remplir tous les champs",
+                        3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_WARNING);
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(priceField.getValue().replace(',', '.'));
+
+                CopyDto newCopy = new CopyDto();
+                newCopy.setItem(item);
+                newCopy.setAcquisitionDate(acquisitionDateField.getValue());
+                newCopy.setPrice(price);
+                newCopy.setStatus("available");
+
+                copyService.save(newCopy);
+
+                // Clear form
+                acquisitionDateField.setValue(LocalDate.now());
+                priceField.clear();
+
+                // Refresh grid
+                refreshCopiesGrid(copiesGrid, item);
+
+                Notification.show("Exemplaire ajouté avec succès",
+                        3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+                // Also refresh the main results grid to update copy count
+                updateResults();
+
+            } catch (NumberFormatException ex) {
+                Notification.show("Prix invalide",
+                        3000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
         addCopyButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        addCopyButton.addClickListener(e -> showAddCopyDialog(item, copiesGrid));
 
-        // Close button
-        Button closeButton = new Button("Fermer");
-        closeButton.addClickListener(e -> dialog.close());
+        addCopyForm.add(acquisitionDateField, priceField, addCopyButton);
 
-        HorizontalLayout buttonLayout = new HorizontalLayout(addCopyButton, closeButton);
-        buttonLayout.setSpacing(true);
+        Button closeButton = new Button("Fermer", e -> dialog.close());
+        closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-        dialogLayout.add(summaryTitle, summary, copiesGrid, buttonLayout);
+        // Layout organization
+        dialogLayout.add(title, copiesGrid, addCopyTitle, addCopyForm, closeButton);
         dialogLayout.setFlexGrow(1, copiesGrid);
 
         dialog.add(dialogLayout);
         dialog.open();
     }
 
-    private void updateCopyStatus(CopyDto copy, String newStatus, Grid<CopyDto> grid) {
+    private void refreshCopiesGrid(Grid<CopyDto> grid, ItemDto item) {
+        List<CopyDto> copies = copyService.findByItem(item.getId());
+        grid.setItems(copies);
+    }
+
+    private void changeCopyStatus(CopyDto copy, String newStatus) {
+        copy.setStatus(newStatus);
         try {
-            copy.setStatus(newStatus);
             copyService.save(copy);
 
-            // Refresh the grid
-            List<CopyDto> updatedCopies = copyService.findByItem(copy.getItem().getId());
-            grid.setItems(updatedCopies);
-
-            Notification.show(
-                    "Statut de l'exemplaire mis à jour",
-                    3000,
-                    Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            String statusLabel = translateStatus(newStatus);
+            Notification.show("Statut de l'exemplaire changé à \"" + statusLabel + "\"",
+                    3000, Notification.Position.MIDDLE)
+                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
         } catch (Exception e) {
-            Notification.show(
-                    "Erreur lors de la mise à jour du statut: " + e.getMessage(),
-                    5000,
-                    Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
+            Notification.show("Erreur lors du changement de statut: " + e.getMessage(),
+                    5000, Notification.Position.MIDDLE)
+                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }
 
-    private void showAddCopyDialog(ItemDto item, Grid<CopyDto> grid) {
-        Dialog addDialog = new Dialog();
-        addDialog.setWidth("500px");
-        addDialog.setHeaderTitle("Ajouter un exemplaire");
-
-        VerticalLayout layout = new VerticalLayout();
-        layout.setPadding(true);
-        layout.setSpacing(true);
-
-        FormLayout formLayout = new FormLayout();
-        formLayout.setResponsiveSteps(
-                new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("500px", 2));
-
-        // Date field
-        DatePicker acquisitionDate = new DatePicker("Date d'acquisition");
-        acquisitionDate.setValue(LocalDate.now());
-        acquisitionDate.setRequired(true);
-
-        // Price field
-        TextField priceField = new TextField("Prix");
-        priceField.setValue("0.0");
-        priceField.setRequired(true);
-
-        // Status select
-        ComboBox<String> statusField = new ComboBox<>("Statut");
-        statusField.setItems("available", "unavailable");
-        statusField.setValue("available");
-        statusField.setItemLabelGenerator(status -> {
-            return switch (status) {
-                case "available" -> "Disponible";
-                case "unavailable" -> "Indisponible";
-                default -> status;
-            };
-        });
-
-        formLayout.add(acquisitionDate, priceField, statusField);
-
-        // Buttons
-        Button saveButton = new Button("Enregistrer");
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        saveButton.addClickListener(e -> {
-            try {
-                // Validate inputs
-                if (acquisitionDate.isEmpty() || priceField.isEmpty() || statusField.isEmpty()) {
-                    Notification.show("Veuillez remplir tous les champs",
-                            3000, Notification.Position.MIDDLE)
-                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                    return;
-                }
-
-                // Create new copy
-                CopyDto newCopy = new CopyDto();
-                newCopy.setItem(item);
-                newCopy.setAcquisitionDate(acquisitionDate.getValue());
-                try {
-                    newCopy.setPrice(Double.parseDouble(priceField.getValue().replace(",", ".")));
-                } catch (NumberFormatException ex) {
-                    Notification.show("Format de prix invalide",
-                            3000, Notification.Position.MIDDLE)
-                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                    return;
-                }
-                newCopy.setStatus(statusField.getValue());
-
-                // Save copy
-                copyService.save(newCopy);
-
-                // Update grid
-                List<CopyDto> updatedCopies = copyService.findByItem(item.getId());
-                grid.setItems(updatedCopies);
-
-                Notification.show("Exemplaire ajouté avec succès",
-                        3000, Notification.Position.MIDDLE)
-                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-
-                addDialog.close();
-
-            } catch (Exception ex) {
-                Notification.show("Erreur: " + ex.getMessage(),
-                        5000, Notification.Position.MIDDLE)
-                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
-            }
-        });
-
-        Button cancelButton = new Button("Annuler");
-        cancelButton.addClickListener(e -> addDialog.close());
-
-        HorizontalLayout buttonLayout = new HorizontalLayout(saveButton, cancelButton);
-        buttonLayout.setSpacing(true);
-
-        layout.add(formLayout, buttonLayout);
-
-        addDialog.add(layout);
-        addDialog.open();
+    private String translateStatus(String status) {
+        return switch (status) {
+            case "available" -> "Disponible";
+            case "unavailable" -> "Indisponible";
+            case "borrowed" -> "Emprunté";
+            case "reserved" -> "Réservé";
+            case "deleted" -> "Supprimé";
+            default -> status;
+        };
     }
 
     private void confirmDeleteItem(ItemDto item) {
-        Dialog confirmDialog = new Dialog();
-        confirmDialog.setHeaderTitle("Confirmer la suppression");
-        confirmDialog.setWidth("500px");
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader("Confirmer la suppression");
+        dialog.setText("Êtes-vous sûr de vouloir supprimer le document \"" + item.getTitle()
+                + "\" ? Cette action marquera tous ses exemplaires comme supprimés.");
 
-        VerticalLayout layout = new VerticalLayout();
-        layout.setPadding(true);
-        layout.setSpacing(true);
+        dialog.setCancelable(true);
+        dialog.setCancelText("Annuler");
 
-        H4 warningTitle = new H4("Attention");
-        warningTitle.getStyle().set("color", "var(--lumo-error-color)");
+        dialog.setConfirmText("Supprimer");
+        dialog.setConfirmButtonTheme("error primary");
 
-        Paragraph warning = new Paragraph(
-                "Cette action va rendre tous les exemplaires de \"" + item.getTitle() +
-                        "\" indisponibles. Le document ne sera pas supprimé de la base de données mais " +
-                        "ne sera plus disponible pour les emprunts et les réservations.");
+        dialog.addConfirmListener(e -> deleteItem(item));
 
-        Checkbox confirmCheck = new Checkbox("Je comprends les conséquences de cette action");
+        dialog.open();
+    }
 
-        Button deleteButton = new Button("Supprimer");
-        deleteButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
-        deleteButton.setEnabled(false);
+    private void deleteItem(ItemDto item) {
+        // Mark all copies as deleted instead of removing them
+        List<CopyDto> copies = copyService.findByItem(item.getId());
+        boolean success = true;
 
-        confirmCheck.addValueChangeListener(e -> {
-            deleteButton.setEnabled(e.getValue());
-        });
-
-        deleteButton.addClickListener(e -> {
-            try {
-                // Get all copies of this item
-                List<CopyDto> copies = copyService.findByItem(item.getId());
-
-                // Update all copies to unavailable
-                for (CopyDto copy : copies) {
-                    copy.setStatus("unavailable");
-                    copyService.save(copy);
-                }
-
+        for (CopyDto copy : copies) {
+            if ("borrowed".equals(copy.getStatus()) || "reserved".equals(copy.getStatus())) {
                 Notification.show(
-                        "Document marqué comme supprimé avec succès",
-                        3000,
-                        Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-
-                confirmDialog.close();
-                searchItems(); // Refresh the grid
-
-            } catch (Exception ex) {
-                Notification.show(
-                        "Erreur lors de la suppression: " + ex.getMessage(),
+                        "Impossible de supprimer un document avec des exemplaires empruntés ou réservés",
                         5000,
                         Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
             }
-        });
 
-        Button cancelButton = new Button("Annuler");
-        cancelButton.addClickListener(e -> confirmDialog.close());
+            copy.setStatus("deleted");
+            try {
+                copyService.save(copy);
+            } catch (Exception e) {
+                success = false;
+            }
+        }
 
-        HorizontalLayout buttonLayout = new HorizontalLayout(deleteButton, cancelButton);
-        buttonLayout.setSpacing(true);
+        if (success) {
+            Notification.show(
+                    "Document et ses exemplaires marqués comme supprimés",
+                    3000,
+                    Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
-        layout.add(warningTitle, warning, confirmCheck, buttonLayout);
-
-        confirmDialog.add(layout);
-        confirmDialog.open();
+            // Refresh grid
+            updateResults();
+        } else {
+            Notification.show(
+                    "Erreur lors de la suppression de certains exemplaires",
+                    5000,
+                    Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_WARNING);
+        }
     }
 }
