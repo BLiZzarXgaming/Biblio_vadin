@@ -8,9 +8,10 @@ import com.example.application.entity.Role;
 import com.example.application.entity.User;
 import com.example.application.repository.RoleRepository;
 import com.example.application.repository.UserRepositoryV2;
+import com.example.application.service.implementation.UserRelationshipService;
 import com.example.application.service.implementation.UserServiceV2;
 import com.example.application.views.MainLayout;
-
+import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -36,8 +37,6 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
-
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -52,32 +51,33 @@ import java.util.stream.Collectors;
 @PageTitle("Gestion des membres")
 @Route(value = "volunteer/members", layout = MainLayout.class)
 @RolesAllowed("ROLE_BÉNÉVOLE")
-public class BenevoleListeMembresView extends VerticalLayout {
+public class BenevoleListeMembresView extends Composite<VerticalLayout> {
 
     private final UserServiceV2 userService;
     private final RoleRepository roleRepository;
     private final UserRepositoryV2 userRepository;
-
-    private final PasswordEncoder passwordEncoder;
+    private final UserRelationshipService userRelationshipService;
 
     // UI components
     private TextField searchField;
     private Grid<UserDto> membersGrid;
     private Button addMemberButton;
+    private H3 parentsTitle;
+    private HorizontalLayout parentSelectors;
 
     public BenevoleListeMembresView(UserServiceV2 userService, RoleRepository roleRepository,
-            UserRepositoryV2 userRepository, PasswordEncoder passwordEncoder) {
+            UserRepositoryV2 userRepository, UserRelationshipService userRelationshipService) {
         this.userService = userService;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.userRelationshipService = userRelationshipService;
 
-        setSizeFull();
-        setPadding(true);
-        setSpacing(true);
+        getContent().setSizeFull();
+        getContent().setPadding(true);
+        getContent().setSpacing(true);
 
         H2 title = new H2("Gestion des membres");
-        add(title);
+        getContent().add(title);
 
         createSearchSection();
         createMembersGrid();
@@ -113,7 +113,7 @@ public class BenevoleListeMembresView extends VerticalLayout {
         searchLayout.add(searchField, searchButton);
         searchLayout.setFlexGrow(1, searchField);
 
-        add(searchLayout);
+        getContent().add(searchLayout);
     }
 
     private void createMembersGrid() {
@@ -147,7 +147,7 @@ public class BenevoleListeMembresView extends VerticalLayout {
                 childBadge.getElement().getThemeList().add("contrast");
                 return childBadge;
             } else {
-                return new Span("Adulte");
+                return new Span("");
             }
         })).setHeader("Type").setWidth("100px");
 
@@ -169,7 +169,7 @@ public class BenevoleListeMembresView extends VerticalLayout {
         membersGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
         membersGrid.setHeight("70vh");
 
-        add(membersGrid);
+        getContent().add(membersGrid);
     }
 
     private void createAddMemberButton() {
@@ -178,7 +178,7 @@ public class BenevoleListeMembresView extends VerticalLayout {
         addMemberButton.getStyle().set("margin-top", "20px");
         addMemberButton.addClickListener(e -> openAddMemberForm());
 
-        add(addMemberButton);
+        getContent().add(addMemberButton);
     }
 
     private void updateMembersList(String searchTerm) {
@@ -324,9 +324,18 @@ public class BenevoleListeMembresView extends VerticalLayout {
         parent1ComboBox.setVisible(member.getIsChild());
         parent2ComboBox.setVisible(member.getIsChild());
 
+        // Initialiser les composants pour la section parents
+        parentsTitle = new H3("Parents");
+        parentsTitle.setVisible(member.getIsChild());
+
+        parentSelectors = new HorizontalLayout();
+        parentSelectors.setSpacing(true);
+        parentSelectors.setPadding(true);
+
         // Show/hide parent selectors based on child status
         childCheckbox.addValueChangeListener(event -> {
             boolean isChild = event.getValue();
+            parentsTitle.setVisible(isChild);
             parent1ComboBox.setVisible(isChild);
             parent2ComboBox.setVisible(isChild);
 
@@ -337,7 +346,8 @@ public class BenevoleListeMembresView extends VerticalLayout {
             }
         });
 
-        parentSection.add(parent1ComboBox, parent2ComboBox);
+        parentSelectors.add(parent1ComboBox, parent2ComboBox);
+        parentSection.add(parentsTitle, parentSelectors);
 
         // Add fields to form
         formLayout.add(usernameField, emailField, firstNameField, lastNameField,
@@ -371,6 +381,28 @@ public class BenevoleListeMembresView extends VerticalLayout {
                 return;
             }
 
+            // Add listener to parent2 to prevent duplicate selection
+            parent2ComboBox.addValueChangeListener(event -> {
+                if (event.getValue() != null && parent1ComboBox.getValue() != null &&
+                        event.getValue().getId().equals(parent1ComboBox.getValue().getId())) {
+                    event.getSource().clear();
+                    Notification.show("Ce parent est déjà sélectionné comme premier parent",
+                            3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
+            });
+
+            // Add listener to parent1 to clear parent2 if they would become the same
+            parent1ComboBox.addValueChangeListener(event -> {
+                if (event.getValue() != null && parent2ComboBox.getValue() != null &&
+                        event.getValue().getId().equals(parent2ComboBox.getValue().getId())) {
+                    parent2ComboBox.clear();
+                    Notification.show("Le premier parent ne peut pas être le même que le deuxième parent",
+                            3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
+            });
+
             // Update member information
             member.setFirstName(firstNameField.getValue());
             member.setLastName(lastNameField.getValue());
@@ -386,8 +418,7 @@ public class BenevoleListeMembresView extends VerticalLayout {
 
             // Update password if provided
             if (!passwordField.isEmpty()) {
-                String hashedPassword = passwordEncoder.encode(passwordField.getValue());
-                member.setPassword(hashedPassword); // In real app, this should be hashed
+                member.setPassword(passwordField.getValue()); // In real app, this should be hashed
             }
 
             try {
@@ -473,15 +504,28 @@ public class BenevoleListeMembresView extends VerticalLayout {
         dateOfBirthPicker.setRequired(true);
         dateOfBirthPicker.setMax(LocalDate.now());
 
-        // Parent-child relationship section
+        // Parent-child relationship section for adding new member
         Div parentSection = new Div();
         parentSection.setWidthFull();
         parentSection.getStyle().set("padding-top", "20px");
         parentSection.getStyle().set("padding-bottom", "10px");
 
-        // Parent selectors
+        H3 parentsTitle = new H3("Gestion des parents");
+        parentsTitle.getStyle().set("margin-top", "0");
+        parentsTitle.getStyle().set("margin-bottom", "10px");
+        parentsTitle.setVisible(false); // Initially hidden because childCheckbox is false by default
+
+        // Parent selectors container with spacing
+        HorizontalLayout parentSelectors = new HorizontalLayout();
+        parentSelectors.setWidthFull();
+        parentSelectors.setSpacing(true);
+        parentSelectors.setPadding(true);
+
         ComboBox<UserDto> parent1ComboBox = new ComboBox<>("Premier parent");
+        parent1ComboBox.setWidthFull();
+
         ComboBox<UserDto> parent2ComboBox = new ComboBox<>("Deuxième parent (optionnel)");
+        parent2ComboBox.setWidthFull();
 
         // Get all adult members for parent selection
         List<UserDto> adultMembers = userService.findAll().stream()
@@ -556,10 +600,7 @@ public class BenevoleListeMembresView extends VerticalLayout {
             newMember.setEmail(emailField.getValue());
             newMember.setPhoneNumber(phoneField.getValue());
             newMember.setCellNumber(cellField.getValue());
-            if (!passwordField.isEmpty()) {
-                String hashedPassword = passwordEncoder.encode(passwordField.getValue());
-                newMember.setPassword(hashedPassword);
-            } // In real app, this should be hashed
+            newMember.setPassword(passwordField.getValue()); // In real app, this should be hashed
             newMember.setStatus("active");
             newMember.setIsChild(childCheckbox.getValue());
 
@@ -648,97 +689,47 @@ public class BenevoleListeMembresView extends VerticalLayout {
      * Find all parents of a child user
      */
     private List<User> findParents(Long childId) {
-        List<User> parents = new ArrayList<>();
-
-        // This would typically involve querying your UserRelationship repository
-        // Since we don't have direct access to that repository, we'll use a native
-        // query
-        // through the UserRepository
-
-        try {
-            // Get all users that are parents of this child
-            List<User> parentUsers = userRepository.findAll().stream()
-                    .filter(user -> {
-                        // Find UserRelationships where this user is a parent
-                        // and the childId matches our target child
-                        return user.getId() != childId; // This is a simplified placeholder
-                    })
-                    .collect(Collectors.toList());
-
-            // In reality, you would run a query like:
-            // SELECT u.* FROM users u
-            // JOIN user_relationships ur ON u.id = ur.parent_id
-            // WHERE ur.child_id = :childId
-
-            return parentUsers;
-        } catch (Exception e) {
-            return new ArrayList<>();
-        }
+        return userRelationshipService.findParentsByChildId(childId);
     }
 
     /**
      * Create parent-child relationships for a new child
      */
-    @Transactional
     private void createParentChildRelationships(Long childId, UserDto parent1, UserDto parent2) {
-        // Here you would save new UserRelationship entities
-        // Since we don't have direct access to that repository, we'll describe the
-        // process
+        List<Long> parentIds = new ArrayList<>();
 
         if (parent1 != null) {
-            createParentChildRelationship(parent1.getId(), childId);
+            parentIds.add(parent1.getId());
         }
 
         if (parent2 != null) {
-            createParentChildRelationship(parent2.getId(), childId);
+            parentIds.add(parent2.getId());
         }
-    }
 
-    /**
-     * Create a single parent-child relationship
-     */
-    private void createParentChildRelationship(Long parentId, Long childId) {
-        // This method would:
-        // 1. Create a new UserRelationshipId with parentId and childId
-        // 2. Create a new UserRelationship with that id and a type like "parent"
-        // 3. Save that relationship
-
-        // Example code (not executable as we don't have the repository):
-        UserRelationshipDto relationship = new UserRelationshipDto();
-
-        UserRelationshipIdDto id = new UserRelationshipIdDto();
-        id.setParentId(parentId);
-        id.setChildId(childId);
-        relationship.setId(id);
-
-        // Set relationship type
-        relationship.setRelationshipType("parent");
-
-        // You would then save this using a UserRelationshipRepository
+        userRelationshipService.updateParentChildRelationships(childId, parentIds, "parent");
     }
 
     /**
      * Update parent-child relationships for an existing child
      */
-    @Transactional
     private void updateParentChildRelationships(Long childId, UserDto parent1, UserDto parent2) {
-        // 1. Remove all existing parent relationships
-        removeParentChildRelationships(childId);
-
-        // 2. Create new relationships
         createParentChildRelationships(childId, parent1, parent2);
     }
 
     /**
      * Remove all parent-child relationships for a child
      */
-    @Transactional
     private void removeParentChildRelationships(Long childId) {
-        // This method would:
-        // 1. Find all UserRelationship entities where childId matches
-        // 2. Delete them all
+        userRelationshipService.removeAllParentRelationships(childId);
+    }
 
-        // Example code (not executable as we don't have the repository):
-        // userRelationshipRepository.deleteAllByChildId(childId);
+    private void setupForm() {
+        // Initialisation des composants pour la section parents
+        parentsTitle = new H3("Parents");
+        parentsTitle.setVisible(false);
+
+        parentSelectors = new HorizontalLayout();
+        parentSelectors.setSpacing(true);
+        parentSelectors.setPadding(true);
     }
 }
