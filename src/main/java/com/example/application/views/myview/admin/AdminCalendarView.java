@@ -48,6 +48,8 @@ import org.vaadin.stefan.fullcalendar.FullCalendar;
 import org.vaadin.stefan.fullcalendar.FullCalendarBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import elemental.json.Json;
+import elemental.json.JsonObject;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -342,8 +344,12 @@ public class AdminCalendarView extends VerticalLayout {
         navigationLayout.setWidthFull();
         navigationLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
 
-        // Create calendar
-        calendar = FullCalendarBuilder.create().build();
+        // Create calendar with explicit timezone settings
+        JsonObject initialOptions = Json.createObject();
+        initialOptions.put("timeZone", "local"); // Définir explicitement le fuseau horaire local
+        initialOptions.put("firstDay", 1); // Commencer la semaine le lundi (0 = dimanche, 1 = lundi)
+
+        calendar = FullCalendarBuilder.create().withInitialOptions(initialOptions).build();
         calendar.setHeightByParent();
         calendar.setWidthFull();
         calendar.setLocale(Locale.FRANCE);

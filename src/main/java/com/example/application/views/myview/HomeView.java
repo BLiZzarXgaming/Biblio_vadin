@@ -7,9 +7,14 @@ import com.example.application.views.MainLayout;
 import com.vaadin.componentfactory.Popup;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.dom.Style;
@@ -27,6 +32,7 @@ import org.vaadin.stefan.fullcalendar.FullCalendar;
 import org.vaadin.stefan.fullcalendar.FullCalendarBuilder;
 
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.Collection;
 import java.util.List;
@@ -44,8 +50,9 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
     private final AvailabilityServiceV2 availabilityService;
 
     private FullCalendar calendar;
-
     private Popup popup;
+    private LocalDate currentMonth = LocalDate.now();
+    private Span monthLabel;
 
     public HomeView(@Autowired AvailabilityServiceV2 userService) {
         this.availabilityService = userService;
@@ -66,21 +73,19 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
 
         JsonObject initialOptions = Json.createObject();
         initialOptions.put("max-height", "100%");
-        //initialOptions.put("timeZone", "UTC");
-        initialOptions.put("header", true); // TODO : voir comment activer les headers
+        initialOptions.put("timeZone", "local");
+        initialOptions.put("header", true);
         initialOptions.put("weekNumbers", false);
-        initialOptions.put("eventLimit", false); // pass an int value to limit the entries per day
+        initialOptions.put("eventLimit", false);
         initialOptions.put("navLinks", true);
         initialOptions.put("selectable", true);
+        initialOptions.put("firstDay", 1);
 
-
-        calendar= FullCalendarBuilder.create().withInitialOptions(initialOptions).build();
-        //calendar.setTimezone(//new Timezone(ZoneId.of("America/Montreal")));
-
+        calendar = FullCalendarBuilder.create().withInitialOptions(initialOptions).build();
         calendar.setWidth("100%");
         calendar.setLocale(Locale.CANADA_FRENCH);
 
-       // if (UI.getCurrent().)
+        // if (UI.getCurrent().)
 
         // Définir l'identifiant des éléments d'entrée
         calendar.setEntryDidMountCallback("""
@@ -93,84 +98,128 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
             openContextMenu(event.getEntry().getId(), event.getEntry().getDescription());
         });
 
-        //ajout des events
-        // Récupérer les disponibilités confirmées depuis la base de données
-        LocalDate currentDate = LocalDate.now(); // ZoneId.of("America/Montreal")
-        LocalDate endOfMonth = currentDate.withDayOfMonth(currentDate.lengthOfMonth());
-        List<AvailabilityDto> availabilities = availabilityService.findByStatusAndDateBetween("Confirmed", currentDate, endOfMonth );
+        // Créer les contrôles de navigation entre les mois
+        Button prevMonthButton = new Button(new Icon(VaadinIcon.ANGLE_LEFT), e -> {
+            currentMonth = currentMonth.minusMonths(1);
+            updateCalendarMonth();
+        });
 
-        // Ajouter les disponibilités au calendrier
-        for (AvailabilityDto availability : availabilities) {
-            Entry entry = new Entry();
+        Button nextMonthButton = new Button(new Icon(VaadinIcon.ANGLE_RIGHT), e -> {
+            currentMonth = currentMonth.plusMonths(1);
+            updateCalendarMonth();
+        });
 
+        Button todayButton = new Button("Aujourd'hui", e -> {
+            currentMonth = LocalDate.now();
+            updateCalendarMonth();
+        });
 
-
-            // Verify that date and time are not null
-            if (availability.getDate() != null && availability.getTime() != null) {
-                LocalDate date = availability.getDate(); // LocalDate
-                LocalTime time = availability.getTime(); // LocalTime
-
-                // Combine LocalDate and LocalTime to get LocalDateTime
-                LocalDateTime startDateTime = LocalDateTime.of(date, time);
-
-                // Define the start time
-                entry.setStart(startDateTime);
-
-                // Calculate the end time by adding the duration
-                LocalDateTime endDateTime = startDateTime.plusMinutes(availability.getDuration());
-
-                // Define the end time
-                entry.setEnd(endDateTime);
-
-                // Set the color based on the type
-                if ("heureOuverture".equals(availability.getType())) {
-                    entry.setColor("green");
-
-                    // Set the title of the entry
-                    entry.setTitle(availability.getTitle());
-
-                    entry.setDescription("Ouvert de " + time.toString() + " à " + time.plusMinutes(availability.getDuration()).toString());
-                } else {
-                    entry.setColor("orange");
-
-                    // Set the title of the entry
-                    entry.setTitle(availability.getTitle());
-
-                    entry.setDescription(entry.getTitle() + "\n"+ "De " + time.toString() + " à " + time.plusMinutes(availability.getDuration()).toString() + "\n\n" + availability.getDetails());
-                }
-
-
-
-                // Add the entry to the calendar
-                calendar.getEntryProvider().asInMemory().addEntry(entry);
-            } else {
-                // Handle the case where date or time is null
-                System.err.println("La date ou l'heure de disponibilité est nulle pour : " + availability.getTitle());
-            }
-        }
-
-
-        // solution pour afficher le mois en haut du calendrier (pas de header)
+        // Créer le conteneur pour le mois avec les boutons de navigation
         Div monthContainer = new Div();
         monthContainer.getStyle().setTextAlign(Style.TextAlign.CENTER);
 
-        //currentDate = LocalDate.now(ZoneId.of("America/Montreal"));
-        String currentMonth = currentDate.getMonth().getDisplayName(TextStyle.FULL, Locale.CANADA_FRENCH);
-        Span monthLabel = new Span(currentMonth);
+        monthLabel = new Span(currentMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.CANADA_FRENCH) + " "
+                + currentMonth.getYear());
         monthLabel.getStyle().set("font-size", "20px");
         monthLabel.getStyle().set("font-weight", "bold");
 
-        monthContainer.getStyle().setWidth("100%");
-        monthContainer.add(monthLabel);
+        HorizontalLayout navigationLayout = new HorizontalLayout(prevMonthButton, monthLabel, nextMonthButton,
+                todayButton);
+        navigationLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+        navigationLayout.setWidthFull();
+        navigationLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
 
-        container.add(monthContainer, calendar);
+        container.add(navigationLayout, calendar);
         container.setFlexGrow(1, calendar);
 
         getContent().add(container);
+
+        // Charger les données initiales
+        loadCalendarData();
     }
 
+    private void updateCalendarMonth() {
+        // Mettre à jour le titre du mois
+        monthLabel.setText(currentMonth.getMonth().getDisplayName(TextStyle.FULL, Locale.CANADA_FRENCH) + " "
+                + currentMonth.getYear());
 
-    public void openContextMenu (String id, String description){
+        // Changer la date d'affichage du calendrier
+        calendar.gotoDate(currentMonth);
+
+        // Recharger les données du calendrier pour le nouveau mois
+        loadCalendarData();
+    }
+
+    private void loadCalendarData() {
+        // Récupérer l'EntryProvider et le convertir en InMemoryEntryProvider
+        var entryProvider = calendar.getEntryProvider().asInMemory();
+
+        // Supprimer toutes les entrées existantes
+        entryProvider.removeAllEntries();
+
+        // Calculer le début et la fin du mois affiché
+        LocalDate firstDay = currentMonth.withDayOfMonth(1);
+        LocalDate lastDay = currentMonth.withDayOfMonth(currentMonth.lengthOfMonth());
+
+        // Récupérer les disponibilités confirmées pour le mois en cours
+        List<AvailabilityDto> availabilities = availabilityService.findByStatusAndDateBetween("Confirmed", firstDay,
+                lastDay);
+
+        // Ajouter chaque disponibilité au calendrier
+        for (AvailabilityDto availability : availabilities) {
+            Entry entry = new Entry();
+
+            // Vérifier que la date et l'heure ne sont pas nulles
+            if (availability.getDate() != null && availability.getTime() != null) {
+                LocalDate date = availability.getDate();
+                LocalTime time = availability.getTime();
+
+                // Combiner LocalDate et LocalTime pour obtenir LocalDateTime
+                LocalDateTime startDateTime = LocalDateTime.of(date, time);
+
+                // Définir l'heure de début
+                entry.setStart(startDateTime);
+
+                // Calculer l'heure de fin en ajoutant la durée
+                LocalDateTime endDateTime = startDateTime.plusMinutes(availability.getDuration());
+
+                // Définir l'heure de fin
+                entry.setEnd(endDateTime);
+
+                // Définir la couleur en fonction du type
+                if ("heureOuverture".equals(availability.getType())) {
+                    entry.setColor("green");
+
+                    // Définir le titre de l'entrée
+                    entry.setTitle(availability.getTitle());
+
+                    entry.setDescription("Ouvert de " + time.format(DateTimeFormatter.ofPattern("HH:mm")) + " à "
+                            + time.plusMinutes(availability.getDuration())
+                                    .format(DateTimeFormatter.ofPattern("HH:mm")));
+                } else {
+                    entry.setColor("orange");
+
+                    // Définir le titre de l'entrée
+                    entry.setTitle(availability.getTitle());
+
+                    entry.setDescription(
+                            entry.getTitle() + "\n" + "De " + time.format(DateTimeFormatter.ofPattern("HH:mm")) + " à "
+                                    + time.plusMinutes(availability.getDuration())
+                                            .format(DateTimeFormatter.ofPattern("HH:mm"))
+                                    + "\n\n"
+                                    + availability.getDetails());
+                }
+
+                // Ajouter l'entrée au calendrier
+                entryProvider.addEntry(entry);
+            } else {
+                // Gérer le cas où la date ou l'heure est nulle
+                System.err.println("La date ou l'heure de disponibilité est nulle pour : " + availability.getTitle());
+            }
+        }
+    }
+
+    public void openContextMenu(String id, String description) {
         initPopup(); // init the popp
 
         popup.removeAll(); // remove old content
@@ -181,8 +230,8 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
         durationEvent.setReadOnly(true);
         durationEvent.setValue(description);
         durationEvent.setWidth("100%");
-        //durationEvent.getStyle().setPadding("0.5em");
-        //durationEvent.setText(description);
+        // durationEvent.getStyle().setPadding("0.5em");
+        // durationEvent.setText(description);
 
         popup.add(durationEvent);
         popup.setFor("entry-" + id);
@@ -190,11 +239,11 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
         popup.show();
     }
 
-    private void initPopup () {
+    private void initPopup() {
         if (popup == null) {
             popup = new Popup();
             popup.setFocusTrap(true);
-           getContent().add(popup);
+            getContent().add(popup);
         }
     }
 
@@ -213,4 +262,3 @@ public class HomeView extends Composite<VerticalLayout> implements BeforeEnterOb
         }
     }
 }
-
