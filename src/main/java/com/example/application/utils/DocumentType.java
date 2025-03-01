@@ -1,3 +1,5 @@
+package com.example.application.utils;
+
 public enum DocumentType {
     BOOK("book", "livre"),
     MAGAZINE("magazine", "revue"),

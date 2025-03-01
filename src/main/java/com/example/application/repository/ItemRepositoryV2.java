@@ -12,67 +12,69 @@ import java.util.List;
 
 @Repository
 public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
-    List<Item> findByType(String type);
-    List<Item> findByTitleContaining(String keyword);
-    List<Item> findByCategoryId(Long categoryId);
+        List<Item> findByType(String type);
 
-    @Query(value = "SELECT * FROM items WHERE "
-            + "(:keyword IS NULL OR LOWER(title) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND "
-            + "(:category IS NULL OR category = :category) AND "
-            + "(:publisher IS NULL OR publisher_id = :publisher) ORDER BY title", nativeQuery = true)
-    List<Item> findByCriteriaWithPagination(@Param("keyword") String keyword,
-                                            @Param("category") Long category,
-                                            @Param("publisher") Long publisher,
-                                            Pageable pageable);
+        List<Item> findByTitleContaining(String keyword);
 
-    @Query(value = "SELECT i.* FROM items i " +
-            "    inner join board_games g on i.id = g.item_id " +
-            "WHERE " +
-            "    (:numberOfPieces IS NULL OR g.number_of_pieces = :numberOfPieces) AND " +
-            "    (:recommendedAge IS NULL OR g.recommended_age = :recommendedAge) AND " +
-            "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
-            "    (:category IS NULL OR i.category = :category) AND " +
-            "    (:publisher IS NULL OR i.publisher_id = :publisher) AND" +
-            "    (:gtin IS NULL OR g.gtin = :gtin OR :gtin = '') ", nativeQuery = true)
-    List<Item> findBoardGameByCriteriaWithPagination(@Param("title") String title,
-                                                     @Param("numberOfPieces") Integer numberOfPieces,
-                                                     @Param("recommendedAge") Integer recommendedAge,
-                                                     @Param("category") Long category,
-                                                     @Param("publisher") Long publisher,
-                                                     @Param("gtin") String gtin,
-                                                     Pageable pageable);
+        List<Item> findByCategoryId(Long categoryId);
 
-    @Query(value = "SELECT i.* FROM items i " +
-            "    inner join magazines m on i.id = m.item_id " +
-            "WHERE " +
-            "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
-            "    (:isni IS NULL OR m.isni = :isni OR :isni = '') AND " +
-            "    (:month IS NULL OR m.month = :month OR :month = '') AND " +
-            "    (:publicationDate IS NULL OR m.publication_date = :publicationDate) AND " +
-            "    (:category IS NULL OR i.category = :category) AND " +
-            "    (:publisher IS NULL OR i.publisher_id = :publisher) ", nativeQuery = true)
-    List<Item> findMagazineByCriteriaWithPagination(@Param("title") String title,
-                                                    @Param("isni") String isni,
-                                                    @Param("month") String month,
-                                                    @Param("publicationDate") LocalDate publicationDate,
-                                                    @Param("category") Long category,
-                                                    @Param("publisher") Long publisher,
-                                                    Pageable pageable);
+        @Query(value = "SELECT * FROM items WHERE "
+                        + "(:title IS NULL OR LOWER(title) LIKE LOWER(CONCAT('%', :title, '%'))) AND "
+                        + "(:category IS NULL OR category = :category) AND "
+                        + "(:publisher IS NULL OR publisher_id = :publisher) ORDER BY title", nativeQuery = true)
+        List<Item> findByCriteriaWithPagination(@Param("title") String title,
+                        @Param("category") Long category,
+                        @Param("publisher") Long publisher,
+                        Pageable pageable);
 
-    @Query(value = "SELECT i.* FROM items i " +
-            "    inner join books b on i.id = b.item_id " +
-            "WHERE  " +
-            "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
-            "    (:isbn IS NULL OR b.isbn = :isbn OR :isbn = '') AND " +
-            "    (:author IS NULL OR LOWER(b.author) LIKE LOWER(CONCAT('%', :author, '%'))) AND " +
-            "    (:publicationDate IS NULL OR b.publication_date = :publicationDate) AND " +
-            "    (:category IS NULL OR i.category = :category) AND " +
-            "    (:publisher IS NULL OR i.publisher_id = :publisher) ", nativeQuery = true)
-    List<Item> findBookByCriteriaWithPagination(@Param("title") String title,
-                                                @Param("author") String author,
-                                                @Param("isbn") String isbn,
-                                                @Param("publicationDate") LocalDate publicationDate,
-                                                @Param("category") Long category,
-                                                @Param("publisher") Long publisher,
-                                                Pageable pageable);
+        @Query(value = "SELECT i.* FROM items i " +
+                        "    inner join board_games g on i.id = g.item_id " +
+                        "WHERE " +
+                        "    (:numberOfPieces IS NULL OR g.number_of_pieces = :numberOfPieces) AND " +
+                        "    (:recommendedAge IS NULL OR g.recommended_age = :recommendedAge) AND " +
+                        "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
+                        "    (:category IS NULL OR i.category = :category) AND " +
+                        "    (:publisher IS NULL OR i.publisher_id = :publisher) AND" +
+                        "    (:gtin IS NULL OR g.gtin = :gtin OR :gtin = '') ", nativeQuery = true)
+        List<Item> findBoardGameByCriteriaWithPagination(@Param("title") String title,
+                        @Param("numberOfPieces") Integer numberOfPieces,
+                        @Param("recommendedAge") Integer recommendedAge,
+                        @Param("category") Long category,
+                        @Param("publisher") Long publisher,
+                        @Param("gtin") String gtin,
+                        Pageable pageable);
+
+        @Query(value = "SELECT i.* FROM items i " +
+                        "    inner join magazines m on i.id = m.item_id " +
+                        "WHERE " +
+                        "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
+                        "    (:isni IS NULL OR m.isni = :isni OR :isni = '') AND " +
+                        "    (:month IS NULL OR m.month = :month OR :month = '') AND " +
+                        "    (:publicationDate IS NULL OR m.publication_date = :publicationDate) AND " +
+                        "    (:category IS NULL OR i.category = :category) AND " +
+                        "    (:publisher IS NULL OR i.publisher_id = :publisher) ", nativeQuery = true)
+        List<Item> findMagazineByCriteriaWithPagination(@Param("title") String title,
+                        @Param("isni") String isni,
+                        @Param("month") String month,
+                        @Param("publicationDate") LocalDate publicationDate,
+                        @Param("category") Long category,
+                        @Param("publisher") Long publisher,
+                        Pageable pageable);
+
+        @Query(value = "SELECT i.* FROM items i " +
+                        "    inner join books b on i.id = b.item_id " +
+                        "WHERE  " +
+                        "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
+                        "    (:isbn IS NULL OR b.isbn = :isbn OR :isbn = '') AND " +
+                        "    (:author IS NULL OR LOWER(b.author) LIKE LOWER(CONCAT('%', :author, '%'))) AND " +
+                        "    (:publicationDate IS NULL OR b.publication_date = :publicationDate) AND " +
+                        "    (:category IS NULL OR i.category = :category) AND " +
+                        "    (:publisher IS NULL OR i.publisher_id = :publisher) ", nativeQuery = true)
+        List<Item> findBookByCriteriaWithPagination(@Param("title") String title,
+                        @Param("author") String author,
+                        @Param("isbn") String isbn,
+                        @Param("publicationDate") LocalDate publicationDate,
+                        @Param("category") Long category,
+                        @Param("publisher") Long publisher,
+                        Pageable pageable);
 }

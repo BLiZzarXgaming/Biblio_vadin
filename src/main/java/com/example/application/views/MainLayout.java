@@ -3,6 +3,7 @@ package com.example.application.views;
 import com.example.application.config.SecurityService;
 import com.example.application.identification_user.MyUserPrincipal;
 import com.example.application.views.myview.*;
+import com.example.application.views.myview.admin.AdminCalendarView;
 import com.example.application.views.myview.admin.AdminHomeView;
 import com.example.application.views.myview.benevole.BenevoleAjouterView;
 import com.example.application.views.myview.benevole.BenevoleCatalogueView;
@@ -10,9 +11,12 @@ import com.example.application.views.myview.benevole.BenevoleEmpruntView;
 import com.example.application.views.myview.benevole.BenevoleHomeView;
 import com.example.application.views.myview.benevole.BenevoleListeMembresView;
 import com.example.application.views.myview.benevole.BenevoleListeReservationView;
+import com.example.application.views.myview.benevole.BenevoleRetardsView;
 import com.example.application.views.myview.benevole.BenevoleRetourView;
 import com.example.application.views.myview.membre.MembreCatalogueView;
-import com.example.application.views.myview.membre.testm1;
+import com.example.application.views.myview.membre.MembreEmpruntsView;
+import com.example.application.views.myview.membre.MembreHistoriqueEmpruntView;
+import com.example.application.views.myview.membre.MembreReservationsView;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
@@ -105,6 +109,9 @@ public class MainLayout extends AppLayout {
 
         nav.addItem(new SideNavItem("Accueil", HomeView.class));
         nav.addItem(new SideNavItem("Catalogue", MembreCatalogueView.class));
+        nav.addItem(new SideNavItem("Mes emprunts", MembreEmpruntsView.class));
+        nav.addItem(new SideNavItem("Mes réservations", MembreReservationsView.class));
+        nav.addItem(new SideNavItem("Mon historique", MembreHistoriqueEmpruntView.class));
 
         return nav;
     }
@@ -118,6 +125,7 @@ public class MainLayout extends AppLayout {
         nav.addItem(new SideNavItem("Retours", BenevoleRetourView.class));
         nav.addItem(new SideNavItem("Membres", BenevoleListeMembresView.class));
         nav.addItem(new SideNavItem("Réservations", BenevoleListeReservationView.class));
+        nav.addItem(new SideNavItem("Retards", BenevoleRetardsView.class));
 
         return nav;
     }
@@ -125,6 +133,7 @@ public class MainLayout extends AppLayout {
     private SideNav createNavigationAdmin(SideNav nav) {
 
         nav.addItem(new SideNavItem("Accueil", AdminHomeView.class));
+        nav.addItem(new SideNavItem("Horaire", AdminCalendarView.class));
 
         return nav;
     }

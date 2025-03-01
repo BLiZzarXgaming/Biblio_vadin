@@ -43,7 +43,8 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
 
     @Override
     public List<ItemDto> searchByTitle(String keyword) {
-        return itemRepository.findByTitleContaining(keyword).stream().map(itemMapper::toDto).collect(Collectors.toList());
+        return itemRepository.findByTitleContaining(keyword).stream().map(itemMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -62,7 +63,8 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
     }
 
     @Override
-    public List<ItemDto> fetchItemsWithFilters(Map<String, Object> searchCriteria, String selectedType, int offset, int limit) {
+    public List<ItemDto> fetchItemsWithFilters(Map<String, Object> searchCriteria, String selectedType, int offset,
+            int limit) {
         Pageable pageable = PageRequest.of(offset / limit, limit); // Pageable object for pagination
         if ("Livre".equals(selectedType)) { // Book
             return itemRepository.findBookByCriteriaWithPagination(
@@ -70,37 +72,41 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
                     (String) searchCriteria.get("author"),
                     (String) searchCriteria.get("isbn"),
                     (LocalDate) searchCriteria.get("publicationDate"),
-                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId() : null,
-                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId() : null,
-                    pageable
-            ).stream().map(itemMapper::toDto).collect(Collectors.toList());
+                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId()
+                            : null,
+                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId()
+                            : null,
+                    pageable).stream().map(itemMapper::toDto).collect(Collectors.toList());
         } else if ("Revue".equals(selectedType)) { // Magazine
             return itemRepository.findMagazineByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (String) searchCriteria.get("isni"),
                     (String) searchCriteria.get("month"),
                     (LocalDate) searchCriteria.get("publicationDate"),
-                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId() : null,
-                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId() : null,
-                    pageable
-            ).stream().map(itemMapper::toDto).collect(Collectors.toList());
+                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId()
+                            : null,
+                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId()
+                            : null,
+                    pageable).stream().map(itemMapper::toDto).collect(Collectors.toList());
         } else if ("Jeu".equals(selectedType)) { // BoardGame
             return itemRepository.findBoardGameByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (Integer) searchCriteria.get("numberOfPieces"),
                     (Integer) searchCriteria.get("recommendedAge"),
-                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId() : null,
-                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId() : null,
+                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId()
+                            : null,
+                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId()
+                            : null,
                     searchCriteria.get("gtin") != null ? (String) searchCriteria.get("gtin") : null,
-                    pageable
-            ).stream().map(itemMapper::toDto).collect(Collectors.toList());
+                    pageable).stream().map(itemMapper::toDto).collect(Collectors.toList());
         } else { // All items
             return itemRepository.findByCriteriaWithPagination(
                     (String) searchCriteria.get("keyword"),
-                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId() : null,
-                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId() : null,
-                    pageable
-            ).stream().map(itemMapper::toDto).collect(Collectors.toList());
+                    searchCriteria.get("category") != null ? ((CategoryDto) searchCriteria.get("category")).getId()
+                            : null,
+                    searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId()
+                            : null,
+                    pageable).stream().map(itemMapper::toDto).collect(Collectors.toList());
         }
     }
 }

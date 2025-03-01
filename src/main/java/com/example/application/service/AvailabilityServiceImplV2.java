@@ -18,7 +18,8 @@ public class AvailabilityServiceImplV2 implements AvailabilityServiceV2 {
     private final AvailabilityRepositoryV2 availabilityRepository;
     private final AvailabilityMapper availabilityMapper;
 
-    public AvailabilityServiceImplV2(AvailabilityRepositoryV2 availabilityRepository, AvailabilityMapper availabilityMapper) {
+    public AvailabilityServiceImplV2(AvailabilityRepositoryV2 availabilityRepository,
+            AvailabilityMapper availabilityMapper) {
         this.availabilityRepository = availabilityRepository;
         this.availabilityMapper = availabilityMapper;
     }
@@ -36,27 +37,32 @@ public class AvailabilityServiceImplV2 implements AvailabilityServiceV2 {
 
     @Override
     public List<AvailabilityDto> searchByTitle(String keyword) {
-        return availabilityRepository.findByTitleContaining(keyword).stream().map(availabilityMapper::toDto).collect(Collectors.toList());
+        return availabilityRepository.findByTitleContaining(keyword).stream().map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<AvailabilityDto> findByDate(LocalDate date) {
-        return availabilityRepository.findByDate(date).stream().map(availabilityMapper::toDto).collect(Collectors.toList());
+        return availabilityRepository.findByDate(date).stream().map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<AvailabilityDto> findByStatus(String status) {
-        return availabilityRepository.findByStatus(status).stream().map(availabilityMapper::toDto).collect(Collectors.toList());
+        return availabilityRepository.findByStatus(status).stream().map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<AvailabilityDto> findByType(String type) {
-        return availabilityRepository.findByType(type).stream().map(availabilityMapper::toDto).collect(Collectors.toList());
+        return availabilityRepository.findByType(type).stream().map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<AvailabilityDto> findByUser(Long userId) {
-        return availabilityRepository.findByUserId(userId).stream().map(availabilityMapper::toDto).collect(Collectors.toList());
+        return availabilityRepository.findByUserId(userId).stream().map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -75,6 +81,28 @@ public class AvailabilityServiceImplV2 implements AvailabilityServiceV2 {
     @Override
     @AnonymousAllowed
     public List<AvailabilityDto> findByStatusAndDateBetween(String status, LocalDate dateStart, LocalDate dateEnd) {
-        return availabilityRepository.findByStatusAndDateBetween(status, dateStart, dateEnd).stream().map(availabilityMapper::toDto).collect(Collectors.toList());
+        return availabilityRepository.findByStatusAndDateBetween(status, dateStart, dateEnd).stream()
+                .map(availabilityMapper::toDto).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<AvailabilityDto> findByDateBetween(LocalDate startDate, LocalDate endDate) {
+        return availabilityRepository.findByDateBetween(startDate, endDate).stream()
+                .map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<AvailabilityDto> findByTypeAndDateBetween(String type, LocalDate startDate, LocalDate endDate) {
+        return availabilityRepository.findByTypeAndDateBetween(type, startDate, endDate).stream()
+                .map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<AvailabilityDto> findByStatusAndType(String status, String type) {
+        return availabilityRepository.findByStatusAndType(status, type).stream()
+                .map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
     }
 }
