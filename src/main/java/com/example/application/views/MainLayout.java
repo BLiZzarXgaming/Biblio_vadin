@@ -4,6 +4,7 @@ import com.example.application.config.SecurityService;
 import com.example.application.identification_user.MyUserPrincipal;
 import com.example.application.views.myview.*;
 import com.example.application.views.myview.admin.AdminCalendarView;
+import com.example.application.views.myview.admin.AdminGestionBenevolesView;
 import com.example.application.views.myview.admin.AdminHomeView;
 import com.example.application.views.myview.benevole.BenevoleAjouterView;
 import com.example.application.views.myview.benevole.BenevoleCatalogueView;
@@ -134,6 +135,7 @@ public class MainLayout extends AppLayout {
 
         nav.addItem(new SideNavItem("Accueil", AdminHomeView.class));
         nav.addItem(new SideNavItem("Horaire", AdminCalendarView.class));
+        nav.addItem(new SideNavItem("Liste Bénévoles", AdminGestionBenevolesView.class));
 
         return nav;
     }
