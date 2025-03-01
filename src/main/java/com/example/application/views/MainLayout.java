@@ -6,6 +6,9 @@ import com.example.application.views.myview.*;
 import com.example.application.views.myview.admin.AdminCalendarView;
 import com.example.application.views.myview.admin.AdminGestionBenevolesView;
 import com.example.application.views.myview.admin.AdminHomeView;
+import com.example.application.views.myview.admin.AdminLimitsView;
+import com.example.application.views.myview.admin.AdminManagementView;
+import com.example.application.views.myview.admin.AdminStatisticsView;
 import com.example.application.views.myview.benevole.BenevoleAjouterView;
 import com.example.application.views.myview.benevole.BenevoleCatalogueView;
 import com.example.application.views.myview.benevole.BenevoleEmpruntView;
@@ -134,9 +137,11 @@ public class MainLayout extends AppLayout {
     private SideNav createNavigationAdmin(SideNav nav) {
 
         nav.addItem(new SideNavItem("Accueil", AdminHomeView.class));
+        nav.addItem(new SideNavItem("Statistiques", AdminStatisticsView.class));
         nav.addItem(new SideNavItem("Horaire", AdminCalendarView.class));
         nav.addItem(new SideNavItem("Liste Bénévoles", AdminGestionBenevolesView.class));
-
+        nav.addItem(new SideNavItem("Limites", AdminLimitsView.class));
+        nav.addItem(new SideNavItem("Gestion admins", AdminManagementView.class));
         return nav;
     }
 
