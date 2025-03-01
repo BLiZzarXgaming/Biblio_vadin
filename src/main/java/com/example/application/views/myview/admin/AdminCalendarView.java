@@ -46,6 +46,8 @@ import jakarta.annotation.security.RolesAllowed;
 import org.vaadin.stefan.fullcalendar.Entry;
 import org.vaadin.stefan.fullcalendar.FullCalendar;
 import org.vaadin.stefan.fullcalendar.FullCalendarBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -66,6 +68,7 @@ public class AdminCalendarView extends VerticalLayout {
     private final AvailabilityServiceV2 availabilityService;
     private final UserServiceV2 userService;
     private final SecurityService securityService;
+    private static final Logger log = LoggerFactory.getLogger(AdminCalendarView.class);
 
     // UI Components
     private FullCalendar calendar;
@@ -80,6 +83,27 @@ public class AdminCalendarView extends VerticalLayout {
     private String currentView = "calendar"; // "calendar" or "grid"
     private Map<String, Component> viewContainers = new HashMap<>();
     private LocalDate currentMonth = LocalDate.now();
+
+    // Pagination
+    private int eventsCurrentPage = 0;
+    private int openHoursCurrentPage = 0;
+    private int pageSize = 10;
+    private Span eventsPaginationInfo;
+    private Span openHoursPaginationInfo;
+    private Button eventsPrevButton;
+    private Button eventsNextButton;
+    private Button openHoursPrevButton;
+    private Button openHoursNextButton;
+    private long totalEvents = 0;
+    private long totalOpenHours = 0;
+
+    // Filtres de recherche
+    private DatePicker eventsStartDateFilter;
+    private DatePicker eventsEndDateFilter;
+    private DatePicker openHoursStartDateFilter;
+    private DatePicker openHoursEndDateFilter;
+    private Set<AvailabilityDto> selectedEvents = new HashSet<>();
+    private Set<AvailabilityDto> selectedOpenHours = new HashSet<>();
 
     // Constants
     private static final String TYPE_EVENT = "event";
@@ -168,11 +192,91 @@ public class AdminCalendarView extends VerticalLayout {
         eventsGrid = createEventsGrid();
         openHoursGrid = createOpeningHoursGrid();
 
-        VerticalLayout eventsLayout = new VerticalLayout(new H3("Liste des Événements"), eventsGrid);
+        // Créer les filtres de recherche pour les événements
+        eventsStartDateFilter = new DatePicker("Date de début");
+        eventsEndDateFilter = new DatePicker("Date de fin");
+        Button eventsSearchButton = new Button("Rechercher", e -> searchEvents());
+        Button eventsResetButton = new Button("Réinitialiser", e -> resetEventsSearch());
+        Button eventsDeleteSelectedButton = new Button("Supprimer la sélection",
+                e -> confirmDeleteMultiple(selectedEvents, TYPE_EVENT));
+        eventsDeleteSelectedButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
+
+        HorizontalLayout eventsFilterLayout = new HorizontalLayout(
+                eventsStartDateFilter, eventsEndDateFilter, eventsSearchButton, eventsResetButton,
+                eventsDeleteSelectedButton);
+        eventsFilterLayout.setAlignItems(FlexComponent.Alignment.BASELINE);
+
+        // Créer les filtres de recherche pour les heures d'ouverture
+        openHoursStartDateFilter = new DatePicker("Date de début");
+        openHoursEndDateFilter = new DatePicker("Date de fin");
+        Button openHoursSearchButton = new Button("Rechercher", e -> searchOpenHours());
+        Button openHoursResetButton = new Button("Réinitialiser", e -> resetOpenHoursSearch());
+        Button openHoursDeleteSelectedButton = new Button("Supprimer la sélection",
+                e -> confirmDeleteMultiple(selectedOpenHours, TYPE_OPENING_HOURS));
+        openHoursDeleteSelectedButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
+
+        HorizontalLayout openHoursFilterLayout = new HorizontalLayout(
+                openHoursStartDateFilter, openHoursEndDateFilter, openHoursSearchButton, openHoursResetButton,
+                openHoursDeleteSelectedButton);
+        openHoursFilterLayout.setAlignItems(FlexComponent.Alignment.BASELINE);
+
+        // Create pagination controls for events
+        eventsPrevButton = new Button("Précédent", e -> {
+            if (eventsCurrentPage > 0) {
+                eventsCurrentPage--;
+                loadEventsData();
+            }
+        });
+
+        eventsNextButton = new Button("Suivant", e -> {
+            if ((eventsCurrentPage + 1) * pageSize < totalEvents) {
+                eventsCurrentPage++;
+                loadEventsData();
+            }
+        });
+
+        eventsPaginationInfo = new Span();
+
+        HorizontalLayout eventsPaginationLayout = new HorizontalLayout(
+                eventsPrevButton, eventsPaginationInfo, eventsNextButton);
+        eventsPaginationLayout.setWidthFull();
+        eventsPaginationLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+
+        // Create pagination controls for opening hours
+        openHoursPrevButton = new Button("Précédent", e -> {
+            if (openHoursCurrentPage > 0) {
+                openHoursCurrentPage--;
+                loadOpeningHoursData();
+            }
+        });
+
+        openHoursNextButton = new Button("Suivant", e -> {
+            if ((openHoursCurrentPage + 1) * pageSize < totalOpenHours) {
+                openHoursCurrentPage++;
+                loadOpeningHoursData();
+            }
+        });
+
+        openHoursPaginationInfo = new Span();
+
+        HorizontalLayout openHoursPaginationLayout = new HorizontalLayout(
+                openHoursPrevButton, openHoursPaginationInfo, openHoursNextButton);
+        openHoursPaginationLayout.setWidthFull();
+        openHoursPaginationLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+
+        VerticalLayout eventsLayout = new VerticalLayout(
+                new H3("Liste des Événements"),
+                eventsFilterLayout,
+                eventsGrid,
+                eventsPaginationLayout);
         eventsLayout.setSizeFull();
         viewContainers.put("events", eventsLayout);
 
-        VerticalLayout openHoursLayout = new VerticalLayout(new H3("Liste des Heures d'ouverture"), openHoursGrid);
+        VerticalLayout openHoursLayout = new VerticalLayout(
+                new H3("Liste des Heures d'ouverture"),
+                openHoursFilterLayout,
+                openHoursGrid,
+                openHoursPaginationLayout);
         openHoursLayout.setSizeFull();
         viewContainers.put("openingHours", openHoursLayout);
 
@@ -267,6 +371,13 @@ public class AdminCalendarView extends VerticalLayout {
         Grid<AvailabilityDto> grid = new Grid<>();
         grid.setHeight("100%");
 
+        // Activer la sélection multiple
+        grid.setSelectionMode(Grid.SelectionMode.MULTI);
+        grid.addSelectionListener(event -> {
+            selectedEvents = new HashSet<>(event.getAllSelectedItems());
+            System.out.println("Sélection d'événements mise à jour: " + selectedEvents.size() + " éléments");
+        });
+
         grid.addColumn(AvailabilityDto::getTitle).setHeader("Titre").setAutoWidth(true).setFlexGrow(1);
         grid.addColumn(av -> av.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 .setHeader("Date").setAutoWidth(true);
@@ -316,6 +427,13 @@ public class AdminCalendarView extends VerticalLayout {
     private Grid<AvailabilityDto> createOpeningHoursGrid() {
         Grid<AvailabilityDto> grid = new Grid<>();
         grid.setHeight("100%");
+
+        // Activer la sélection multiple
+        grid.setSelectionMode(Grid.SelectionMode.MULTI);
+        grid.addSelectionListener(event -> {
+            selectedOpenHours = new HashSet<>(event.getAllSelectedItems());
+            System.out.println("Sélection d'heures d'ouverture mise à jour: " + selectedOpenHours.size() + " éléments");
+        });
 
         grid.addColumn(AvailabilityDto::getTitle).setHeader("Titre").setAutoWidth(true).setFlexGrow(1);
         grid.addColumn(av -> av.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
@@ -380,10 +498,36 @@ public class AdminCalendarView extends VerticalLayout {
 
         dialog.addConfirmListener(event -> {
             try {
-                availabilityService.deleteById(availability.getId());
+                // Stocker le type d'élément avant de le supprimer
+                final String elementType = availability.getType();
+                final Long elementId = availability.getId();
+
+                // Effectuer la suppression
+                availabilityService.deleteById(elementId);
                 showNotification("Suppression réussie", NotificationVariant.LUMO_SUCCESS);
-                refreshView();
+
+                // Utiliser UI.getCurrent().access pour garantir que les mises à jour de l'UI se
+                // font dans le thread UI
+                UI.getCurrent().access(() -> {
+                    // Forcer le rafraîchissement des données selon le type d'élément supprimé
+                    if (TYPE_EVENT.equals(elementType)) {
+                        log.info("Rafraîchissement de la liste des événements après suppression de l'ID " + elementId);
+                        eventsCurrentPage = 0;
+                        loadEventsData();
+                    } else if (TYPE_OPENING_HOURS.equals(elementType)) {
+                        log.info("Rafraîchissement de la liste des heures d'ouverture après suppression de l'ID "
+                                + elementId);
+                        openHoursCurrentPage = 0;
+                        loadOpeningHoursData();
+                    }
+
+                    // Mettre à jour également le calendrier si on est dans cette vue
+                    if ("calendar".equals(currentView)) {
+                        loadCalendarData();
+                    }
+                });
             } catch (Exception e) {
+                log.error("Erreur lors de la suppression de l'élément ID=" + availability.getId(), e);
                 showNotification("Erreur lors de la suppression: " + e.getMessage(), NotificationVariant.LUMO_ERROR);
             }
         });
@@ -533,7 +677,14 @@ public class AdminCalendarView extends VerticalLayout {
                 }
 
                 dialog.close();
-                refreshView();
+
+                // Mettre à jour les vues selon le contexte actuel
+                if ("calendar".equals(currentView)) {
+                    loadCalendarData();
+                } else if ("events".equals(currentView)) {
+                    eventsCurrentPage = 0;
+                    loadEventsData();
+                }
 
             } catch (Exception ex) {
                 showNotification("Erreur: " + ex.getMessage(), NotificationVariant.LUMO_ERROR);
@@ -747,7 +898,14 @@ public class AdminCalendarView extends VerticalLayout {
                 }
 
                 dialog.close();
-                refreshView();
+
+                // Mettre à jour les vues selon le contexte actuel
+                if ("calendar".equals(currentView)) {
+                    loadCalendarData();
+                } else if ("openingHours".equals(currentView)) {
+                    openHoursCurrentPage = 0;
+                    loadOpeningHoursData();
+                }
 
             } catch (Exception ex) {
                 showNotification("Erreur: " + ex.getMessage(), NotificationVariant.LUMO_ERROR);
@@ -873,15 +1031,235 @@ public class AdminCalendarView extends VerticalLayout {
     }
 
     private void loadEventsData() {
-        // Load only events (not opening hours)
-        List<AvailabilityDto> events = availabilityService.findByType(TYPE_EVENT);
-        eventsGrid.setItems(events);
+        // Vérifier si des filtres de date sont appliqués
+        if (eventsStartDateFilter.getValue() != null && eventsEndDateFilter.getValue() != null) {
+            List<AvailabilityDto> events = availabilityService.findByTypeAndDateBetween(
+                    TYPE_EVENT,
+                    eventsStartDateFilter.getValue(),
+                    eventsEndDateFilter.getValue());
+
+            // Appliquer la pagination manuellement
+            int fromIndex = eventsCurrentPage * pageSize;
+            int toIndex = Math.min(fromIndex + pageSize, events.size());
+
+            if (fromIndex < events.size()) {
+                eventsGrid.setItems(events.subList(fromIndex, toIndex));
+            } else {
+                eventsGrid.setItems(Collections.emptyList());
+            }
+
+            // Mettre à jour le total pour la pagination
+            totalEvents = events.size();
+        } else {
+            // Utiliser la pagination du service si aucun filtre n'est appliqué
+            List<AvailabilityDto> events = availabilityService.findByTypeWithPagination(
+                    TYPE_EVENT, eventsCurrentPage * pageSize, pageSize);
+            eventsGrid.setItems(events);
+
+            // Mettre à jour le total pour la pagination
+            totalEvents = availabilityService.countByType(TYPE_EVENT);
+        }
+
+        // Mettre à jour les contrôles de pagination
+        updateEventsPaginationControls();
+
+        // Réinitialiser la sélection après le chargement des données
+        selectedEvents.clear();
+        eventsGrid.deselectAll();
     }
 
     private void loadOpeningHoursData() {
-        // Load only opening hours (not events)
-        List<AvailabilityDto> openingHours = availabilityService.findByType(TYPE_OPENING_HOURS);
-        openHoursGrid.setItems(openingHours);
+        // Vérifier si des filtres de date sont appliqués
+        if (openHoursStartDateFilter.getValue() != null && openHoursEndDateFilter.getValue() != null) {
+            List<AvailabilityDto> openingHours = availabilityService.findByTypeAndDateBetween(
+                    TYPE_OPENING_HOURS,
+                    openHoursStartDateFilter.getValue(),
+                    openHoursEndDateFilter.getValue());
+
+            // Appliquer la pagination manuellement
+            int fromIndex = openHoursCurrentPage * pageSize;
+            int toIndex = Math.min(fromIndex + pageSize, openingHours.size());
+
+            if (fromIndex < openingHours.size()) {
+                openHoursGrid.setItems(openingHours.subList(fromIndex, toIndex));
+            } else {
+                openHoursGrid.setItems(Collections.emptyList());
+            }
+
+            // Mettre à jour le total pour la pagination
+            totalOpenHours = openingHours.size();
+        } else {
+            // Utiliser la pagination du service si aucun filtre n'est appliqué
+            List<AvailabilityDto> openingHours = availabilityService.findByTypeWithPagination(
+                    TYPE_OPENING_HOURS, openHoursCurrentPage * pageSize, pageSize);
+            openHoursGrid.setItems(openingHours);
+
+            // Mettre à jour le total pour la pagination
+            totalOpenHours = availabilityService.countByType(TYPE_OPENING_HOURS);
+        }
+
+        // Mettre à jour les contrôles de pagination
+        updateOpenHoursPaginationControls();
+
+        // Réinitialiser la sélection après le chargement des données
+        selectedOpenHours.clear();
+        openHoursGrid.deselectAll();
+    }
+
+    private void searchEvents() {
+        if (eventsStartDateFilter.getValue() == null || eventsEndDateFilter.getValue() == null) {
+            showNotification("Veuillez sélectionner une date de début et une date de fin",
+                    NotificationVariant.LUMO_ERROR);
+            return;
+        }
+
+        if (eventsEndDateFilter.getValue().isBefore(eventsStartDateFilter.getValue())) {
+            showNotification("La date de fin doit être après la date de début", NotificationVariant.LUMO_ERROR);
+            return;
+        }
+
+        // Réinitialiser la page courante et charger les données
+        eventsCurrentPage = 0;
+        loadEventsData();
+    }
+
+    private void resetEventsSearch() {
+        eventsStartDateFilter.clear();
+        eventsEndDateFilter.clear();
+        eventsCurrentPage = 0;
+        loadEventsData();
+    }
+
+    private void searchOpenHours() {
+        if (openHoursStartDateFilter.getValue() == null || openHoursEndDateFilter.getValue() == null) {
+            showNotification("Veuillez sélectionner une date de début et une date de fin",
+                    NotificationVariant.LUMO_ERROR);
+            return;
+        }
+
+        if (openHoursEndDateFilter.getValue().isBefore(openHoursStartDateFilter.getValue())) {
+            showNotification("La date de fin doit être après la date de début", NotificationVariant.LUMO_ERROR);
+            return;
+        }
+
+        // Réinitialiser la page courante et charger les données
+        openHoursCurrentPage = 0;
+        loadOpeningHoursData();
+    }
+
+    private void resetOpenHoursSearch() {
+        openHoursStartDateFilter.clear();
+        openHoursEndDateFilter.clear();
+        openHoursCurrentPage = 0;
+        loadOpeningHoursData();
+    }
+
+    private void confirmDeleteMultiple(Set<AvailabilityDto> selectedItems, String type) {
+        if (selectedItems == null || selectedItems.isEmpty()) {
+            Notification.show("Aucun élément sélectionné pour la suppression", 3000, Notification.Position.MIDDLE);
+            return;
+        }
+
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader("Confirmation de suppression");
+        dialog.setText("Êtes-vous sûr de vouloir supprimer les " + selectedItems.size() + " éléments sélectionnés ?");
+
+        dialog.setCancelable(true);
+        dialog.setCancelText("Annuler");
+
+        dialog.setConfirmText("Supprimer");
+        dialog.setConfirmButtonTheme("error primary");
+
+        dialog.addConfirmListener(event -> {
+            int successCount = 0;
+            List<Long> failedIds = new ArrayList<>();
+
+            // Copier les éléments sélectionnés pour éviter les problèmes de concurrence
+            final String finalType = type;
+
+            for (AvailabilityDto item : selectedItems) {
+                try {
+                    if (item != null && item.getId() != null) {
+                        availabilityService.deleteById(item.getId());
+                        successCount++;
+                    } else {
+                        System.err.println("Erreur: Tentative de suppression d'un élément null ou avec ID null");
+                        if (item != null) {
+                            failedIds.add(-1L); // Marquer comme échec sans ID
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Erreur lors de la suppression de l'élément ID=" +
+                            (item != null ? item.getId() : "null") + ": " + e.getMessage());
+                    e.printStackTrace();
+                    if (item != null && item.getId() != null) {
+                        failedIds.add(item.getId());
+                    }
+                }
+            }
+
+            final int finalSuccessCount = successCount;
+            final List<Long> finalFailedIds = new ArrayList<>(failedIds);
+
+            // Utiliser UI.getCurrent().access pour garantir que les mises à jour de l'UI se
+            // font dans le thread UI
+            UI.getCurrent().access(() -> {
+                // Recharger les données après la suppression
+                if (finalType.equals(TYPE_EVENT)) {
+                    log.info("Rafraîchissement de la liste des événements après suppression multiple");
+                    eventsCurrentPage = 0;
+                    loadEventsData();
+                } else {
+                    log.info("Rafraîchissement de la liste des heures d'ouverture après suppression multiple");
+                    openHoursCurrentPage = 0;
+                    loadOpeningHoursData();
+                }
+
+                // Mettre à jour également le calendrier si nécessaire
+                if ("calendar".equals(currentView)) {
+                    loadCalendarData();
+                }
+
+                // Afficher un message de confirmation avec des détails
+                if (finalFailedIds.isEmpty()) {
+                    Notification.show(finalSuccessCount + " éléments supprimés avec succès",
+                            3000, Notification.Position.MIDDLE);
+                } else {
+                    Notification.show(finalSuccessCount + " éléments supprimés avec succès, " +
+                            finalFailedIds.size() + " échecs", 3000, Notification.Position.MIDDLE)
+                            .addThemeVariants(NotificationVariant.LUMO_WARNING);
+                    log.warn("Échecs de suppression pour les IDs: " + finalFailedIds);
+                }
+            });
+        });
+
+        dialog.open();
+    }
+
+    private void updateEventsPaginationControls() {
+        int startItem = Math.min(eventsCurrentPage * pageSize + 1, (int) totalEvents);
+        int endItem = Math.min((eventsCurrentPage + 1) * pageSize, (int) totalEvents);
+
+        eventsPaginationInfo.setText(String.format("Affichage %d - %d sur %d",
+                totalEvents > 0 ? startItem : 0,
+                endItem,
+                totalEvents));
+
+        eventsPrevButton.setEnabled(eventsCurrentPage > 0);
+        eventsNextButton.setEnabled((eventsCurrentPage + 1) * pageSize < totalEvents);
+    }
+
+    private void updateOpenHoursPaginationControls() {
+        int startItem = Math.min(openHoursCurrentPage * pageSize + 1, (int) totalOpenHours);
+        int endItem = Math.min((openHoursCurrentPage + 1) * pageSize, (int) totalOpenHours);
+
+        openHoursPaginationInfo.setText(String.format("Affichage %d - %d sur %d",
+                totalOpenHours > 0 ? startItem : 0,
+                endItem,
+                totalOpenHours));
+
+        openHoursPrevButton.setEnabled(openHoursCurrentPage > 0);
+        openHoursNextButton.setEnabled((openHoursCurrentPage + 1) * pageSize < totalOpenHours);
     }
 
     private void updateCalendarMonth() {
@@ -896,16 +1274,6 @@ public class AdminCalendarView extends VerticalLayout {
 
         // Reload calendar data for the new month
         loadCalendarData();
-    }
-
-    private void refreshView() {
-        if ("calendar".equals(currentView)) {
-            loadCalendarData();
-        } else if ("events".equals(currentView)) {
-            loadEventsData();
-        } else if ("openingHours".equals(currentView)) {
-            loadOpeningHoursData();
-        }
     }
 
     private void showNotification(String message, NotificationVariant variant) {

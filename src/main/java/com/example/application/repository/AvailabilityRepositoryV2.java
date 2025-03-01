@@ -1,7 +1,9 @@
 package com.example.application.repository;
 
 import com.example.application.entity.Availability;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -16,6 +18,10 @@ public interface AvailabilityRepositoryV2 extends JpaRepository<Availability, Lo
     List<Availability> findByStatus(String status);
 
     List<Availability> findByType(String type);
+
+    List<Availability> findByType(String type, Pageable pageable);
+
+    long countByType(String type);
 
     List<Availability> findByUserId(Long userId);
 

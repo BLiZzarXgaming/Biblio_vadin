@@ -55,4 +55,22 @@ public interface AvailabilityServiceV2 {
      * @return List of availabilities matching the criteria
      */
     List<AvailabilityDto> findByStatusAndType(String status, String type);
+
+    /**
+     * Find availabilities by type with pagination
+     * 
+     * @param type   The type of availability (e.g., "event" or "heureOuverture")
+     * @param offset The offset for pagination
+     * @param limit  The maximum number of results to return
+     * @return List of availabilities matching the criteria with pagination
+     */
+    List<AvailabilityDto> findByTypeWithPagination(String type, int offset, int limit);
+
+    /**
+     * Count the total number of availabilities by type
+     * 
+     * @param type The type of availability (e.g., "event" or "heureOuverture")
+     * @return The total count of availabilities of the specified type
+     */
+    long countByType(String type);
 }

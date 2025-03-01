@@ -6,7 +6,12 @@ import com.example.application.entity.Mapper.AvailabilityMapper;
 import com.example.application.repository.AvailabilityRepositoryV2;
 import com.example.application.service.implementation.AvailabilityServiceV2;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,6 +22,7 @@ import java.util.stream.Collectors;
 public class AvailabilityServiceImplV2 implements AvailabilityServiceV2 {
     private final AvailabilityRepositoryV2 availabilityRepository;
     private final AvailabilityMapper availabilityMapper;
+    private static final Logger log = LoggerFactory.getLogger(AvailabilityServiceImplV2.class);
 
     public AvailabilityServiceImplV2(AvailabilityRepositoryV2 availabilityRepository,
             AvailabilityMapper availabilityMapper) {
@@ -60,6 +66,19 @@ public class AvailabilityServiceImplV2 implements AvailabilityServiceV2 {
     }
 
     @Override
+    public List<AvailabilityDto> findByTypeWithPagination(String type, int offset, int limit) {
+        Pageable pageable = PageRequest.of(offset / limit, limit, Sort.by("date").descending());
+        return availabilityRepository.findByType(type, pageable).stream()
+                .map(availabilityMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countByType(String type) {
+        return availabilityRepository.countByType(type);
+    }
+
+    @Override
     public List<AvailabilityDto> findByUser(Long userId) {
         return availabilityRepository.findByUserId(userId).stream().map(availabilityMapper::toDto)
                 .collect(Collectors.toList());
@@ -75,7 +94,32 @@ public class AvailabilityServiceImplV2 implements AvailabilityServiceV2 {
 
     @Override
     public void deleteById(Long id) {
-        availabilityRepository.deleteById(id);
+        try {
+            // Vérifier si l'ID est null
+            if (id == null) {
+                String errorMsg = "Impossible de supprimer: l'ID fourni est null";
+                log.error(errorMsg);
+                throw new IllegalArgumentException(errorMsg);
+            }
+
+            // Vérifier si l'élément existe avant de le supprimer
+            if (!availabilityRepository.existsById(id)) {
+                String errorMsg = "Impossible de supprimer: aucun élément trouvé avec l'ID " + id;
+                log.error(errorMsg);
+                throw new IllegalArgumentException(errorMsg);
+            }
+
+            // Procéder à la suppression
+            availabilityRepository.deleteById(id);
+            log.info("Élément avec ID {} supprimé avec succès", id);
+        } catch (IllegalArgumentException e) {
+            // Ces exceptions sont déjà loggées et peuvent être propagées
+            throw e;
+        } catch (Exception e) {
+            String errorMsg = "Erreur lors de la suppression de l'élément avec ID " + id;
+            log.error(errorMsg, e);
+            throw new RuntimeException(errorMsg, e);
+        }
     }
 
     @Override
