@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -77,4 +78,74 @@ public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
                         @Param("category") Long category,
                         @Param("publisher") Long publisher,
                         Pageable pageable);
+
+        /**
+         * Compte le nombre d'items créés depuis une date spécifique
+         * 
+         * @param date Date à partir de laquelle compter les items
+         * @return Le nombre d'items créés depuis la date spécifiée
+         */
+        @Query("SELECT COUNT(i) FROM Item i WHERE i.createdAt >= :date")
+        long countItemsCreatedSince(@Param("date") Date date);
+
+        /**
+         * Calcule la valeur totale de l'inventaire (somme de la valeur de tous les
+         * items)
+         * 
+         * @return La somme des valeurs de tous les items
+         */
+        @Query("SELECT SUM(i.value) FROM Item i")
+        double sumTotalItemsValue();
+
+        /**
+         * Trouve la catégorie la plus populaire basée sur le nombre d'emprunts
+         * 
+         * @param date Date à partir de laquelle compter les emprunts (généralement 1 an
+         *             en arrière)
+         * @return La catégorie la plus populaire et son nombre d'emprunts
+         */
+        @Query(value = "SELECT c.name, COUNT(l.id) AS loan_count " +
+                        "FROM categories c " +
+                        "JOIN items i ON c.id = i.category " +
+                        "JOIN copies cp ON i.id = cp.item_id " +
+                        "JOIN loans l ON cp.id = l.copy_id " +
+                        "WHERE l.loan_date >= :date " +
+                        "GROUP BY c.id, c.name " +
+                        "ORDER BY loan_count DESC " +
+                        "LIMIT 1", nativeQuery = true)
+        Object[] findMostPopularCategorySince(@Param("date") Date date);
+
+        /**
+         * Trouve le type de document le plus emprunté
+         * 
+         * @param date Date à partir de laquelle compter les emprunts (généralement 1 an
+         *             en arrière)
+         * @return Le type le plus emprunté et son nombre d'emprunts
+         */
+        @Query(value = "SELECT i.type, COUNT(l.id) AS loan_count " +
+                        "FROM items i " +
+                        "JOIN copies cp ON i.id = cp.item_id " +
+                        "JOIN loans l ON cp.id = l.copy_id " +
+                        "WHERE l.loan_date >= :date " +
+                        "GROUP BY i.type " +
+                        "ORDER BY loan_count DESC " +
+                        "LIMIT 1", nativeQuery = true)
+        Object[] findMostBorrowedTypeSince(@Param("date") Date date);
+
+        /**
+         * Trouve le document le plus populaire basé sur le nombre d'emprunts
+         * 
+         * @param date Date à partir de laquelle compter les emprunts (généralement 1 an
+         *             en arrière)
+         * @return Le document le plus populaire et son nombre d'emprunts
+         */
+        @Query(value = "SELECT i.id, i.title, i.type, COUNT(l.id) AS loan_count " +
+                        "FROM items i " +
+                        "JOIN copies cp ON i.id = cp.item_id " +
+                        "JOIN loans l ON cp.id = l.copy_id " +
+                        "WHERE l.loan_date >= :date " +
+                        "GROUP BY i.id, i.title, i.type " +
+                        "ORDER BY loan_count DESC " +
+                        "LIMIT 1", nativeQuery = true)
+        Object[] findMostPopularItemSince(@Param("date") Date date);
 }

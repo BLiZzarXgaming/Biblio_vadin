@@ -210,7 +210,7 @@ public class AdminStatisticsView extends VerticalLayout {
                         contentLayout.add(userKeyStatsPanel);
 
                         // Graphique sur les utilisateurs
-                        ApexCharts usersByRoleChart = createUsersByRoleChart();
+                        Component usersByRoleChart = createUsersByRoleChart();
 
                         // Créer un conteneur pour le graphique avec une taille explicite
                         Div chartContainer = new Div(usersByRoleChart);
@@ -345,11 +345,7 @@ public class AdminStatisticsView extends VerticalLayout {
 
                         // Convertir les données pour le graphique
                         String[] statusLabels = loansByStatus.keySet().toArray(new String[0]);
-
-                        // Convertir les valeurs en Double[] pour le graphique PIE
-                        Double[] statusValues = loansByStatus.values().stream()
-                                        .map(Long::doubleValue)
-                                        .toArray(Double[]::new);
+                        Number[] statusValues = loansByStatus.values().toArray(new Number[0]);
 
                         // Création du graphique ApexCharts
                         ApexCharts chart = ApexChartsBuilder.get()
@@ -363,7 +359,7 @@ public class AdminStatisticsView extends VerticalLayout {
                                                         .withAlign(Align.LEFT)
                                                         .build())
                                         .withLabels(statusLabels)
-                                        .withSeries(statusValues) // Utiliser directement le tableau de Double
+                                        .withSeries(new Series<>(statusValues))
                                         .withLegend(LegendBuilder.get()
                                                         .withPosition(Position.RIGHT)
                                                         .build())
@@ -386,45 +382,70 @@ public class AdminStatisticsView extends VerticalLayout {
                 }
         }
 
-        private ApexCharts createUsersByRoleChart() {
+        /**
+         * Crée un graphique Donut pour afficher la répartition des utilisateurs par
+         * rôle
+         * Utilise les données réelles provenant du service utilisateur
+         */
+        private Component createUsersByRoleChart() {
                 try {
-                        // Simuler des données (à remplacer par de vraies données)
-                        Map<String, Double> usersByRole = new HashMap<>();
-                        usersByRole.put("Membres", 120.0);
-                        usersByRole.put("Bénévoles", 15.0);
-                        usersByRole.put("Administrateurs", 5.0);
+                        // Récupération des statistiques réelles depuis le service
+                        Map<String, Long> usersByRole = userService.countUsersByRole();
 
                         LOGGER.info("Données du graphique des utilisateurs: " + usersByRole);
 
                         // Préparer les données pour le graphique
                         String[] roleLabels = usersByRole.keySet().toArray(new String[0]);
-                        Double[] roleValues = usersByRole.values().toArray(new Double[0]);
 
-                        // Création du graphique ApexCharts avec une approche différente
+                        // Convertir les valeurs en Double[] pour le graphique DONUT
+                        Double[] roleValues = usersByRole.values().stream()
+                                        .map(Long::doubleValue)
+                                        .toArray(Double[]::new);
+
+                        // Création du graphique ApexCharts
                         ApexCharts chart = ApexChartsBuilder.get()
                                         .withChart(ChartBuilder.get()
                                                         .withType(Type.DONUT)
                                                         .withHeight("400")
                                                         .build())
+                                        .withTitle(TitleSubtitleBuilder.get()
+                                                        .withText("Répartition des utilisateurs par rôle")
+                                                        .withAlign(Align.CENTER)
+                                                        .build())
                                         .withLabels(roleLabels)
-                                        .withSeries(roleValues) // Utiliser directement le tableau de Double
+                                        .withSeries(roleValues)
+                                        .withLegend(LegendBuilder.get()
+                                                        .withPosition(Position.RIGHT)
+                                                        .build())
+                                        .withTooltip(TooltipBuilder.get()
+                                                        .withY(YBuilder.get()
+                                                                        .withFormatter("function(value) { return value + ' utilisateurs'; }")
+                                                                        .build())
+                                                        .build())
                                         .build();
 
-                        return chart;
+                        // Création d'un conteneur pour le graphique
+                        Div chartContainer = new Div(chart);
+                        chartContainer.addClassName("donut-chart-container");
+                        chartContainer.getStyle().set("width", "100%");
+                        chartContainer.getStyle().set("height", "400px");
+
+                        // Définir explicitement les dimensions
+                        chart.setWidth("100%");
+                        chart.setHeight("400px");
+
+                        return chartContainer;
                 } catch (Exception e) {
                         LOGGER.log(Level.SEVERE, "Erreur lors de la création du graphique des utilisateurs par rôle",
                                         e);
-                        throw new RuntimeException("Erreur lors de la création du graphique: " + e.getMessage(), e);
+                        return new Span("Erreur de chargement du graphique: " + e.getMessage());
                 }
         }
 
         private ApexCharts createItemsByTypeChart() {
                 try {
-                        // Simuler des données (à remplacer par de vraies données)
-                        Map<String, Number> itemsByType = new HashMap<>();
-                        itemsByType.put("Livres", 1500);
-                        itemsByType.put("Magazines", 300);
-                        itemsByType.put("Jeux de société", 100);
+                        // Récupérer les données réelles depuis le service
+                        Map<String, Long> itemsByType = itemService.countItemsByType();
 
                         LOGGER.info("Données du graphique des types de documents: " + itemsByType);
 
@@ -441,14 +462,19 @@ public class AdminStatisticsView extends VerticalLayout {
                                                         .withText("Répartition des documents par type")
                                                         .withAlign(Align.LEFT)
                                                         .build())
-                                        .withSeries(new Series<>("Quantité", typeValues))
+                                        .withSeries(new Series<>("Nombre de documents", typeValues))
                                         .withXaxis(XAxisBuilder.get()
                                                         .withCategories(typeLabels)
                                                         .build())
                                         .withYaxis(YAxisBuilder.get()
                                                         .withTitle(TitleBuilder.get()
-                                                                        .withText("Nombre de documents")
+                                                                        .withText("Quantité")
                                                                         .build())
+                                                        .build())
+                                        .withLegend(LegendBuilder.get()
+                                                        .withPosition(Position.TOP)
+                                                        .withHorizontalAlign(
+                                                                        com.github.appreciated.apexcharts.config.legend.HorizontalAlign.RIGHT)
                                                         .build())
                                         .withPlotOptions(PlotOptionsBuilder.get()
                                                         .withBar(BarBuilder.get()
@@ -542,9 +568,9 @@ public class AdminStatisticsView extends VerticalLayout {
                                 VaadinIcon.FILE_TEXT);
 
                 // Statistique 3: Valeur totale de l'inventaire en dollars canadiens
-                String totalValue = calculateTotalValue();
+                String totalValue = calculateTotalBorrowedValue();
                 Component statBox3 = createStatBox(
-                                "Valeur de l'inventaire",
+                                "Valeur des emprunts",
                                 totalValue,
                                 VaadinIcon.DOLLAR);
 
@@ -601,32 +627,39 @@ public class AdminStatisticsView extends VerticalLayout {
          * Calcule la catégorie la plus populaire basée sur les emprunts
          */
         private String calculateMostPopularCategory(List<LoanDto> loans) {
-                // Simulé pour le moment - à remplacer par la vraie logique
-                return "Romans";
+                // Utiliser le service pour obtenir la catégorie la plus populaire
+                return itemService.getMostPopularCategory();
         }
 
         /**
          * Détermine le type de document le plus emprunté
          */
         private String calculateMostBorrowedType(List<LoanDto> loans) {
-                // Simulé pour le moment - à remplacer par la vraie logique
-                return "Livres";
+                // Utiliser le service pour obtenir le type le plus emprunté
+                return itemService.getMostBorrowedType();
+        }
+
+        private String calculateTotalBorrowedValue() {
+                // Utiliser le service pour obtenir la valeur totale des emprunts
+                return String.format("%,.0f $ CAD", itemService.calculateTotalBorrowedValue());
         }
 
         /**
          * Calcule la valeur totale des documents de l'inventaire en dollars canadiens
          */
         private String calculateTotalValue() {
-                // Simulé pour le moment - à remplacer par la vraie logique
-                return "12 500 $ CAD";
+                // Utiliser le service pour calculer la valeur totale et la formater
+                double value = itemService.calculateTotalInventoryValue();
+                // Formater en monnaie canadienne
+                return String.format("%,.0f $ CAD", value);
         }
 
         /**
          * Calcule le nombre total de réservations
          */
         private int calculateReservationsCount() {
-                // Simulé pour le moment - à remplacer par la vraie logique
-                return 24;
+                // Utiliser le service pour compter les réservations
+                return loanService.countReservations();
         }
 
         /**
@@ -639,27 +672,31 @@ public class AdminStatisticsView extends VerticalLayout {
                 statsPanel.setSpacing(true);
 
                 // Statistique 1: Nombre total d'utilisateurs
+                int totalUsers = userService.countTotalUsers();
                 Component statBox1 = createStatBox(
                                 "Nombre total d'utilisateurs",
-                                "140",
+                                String.valueOf(totalUsers),
                                 VaadinIcon.USERS);
 
                 // Statistique 2: Nouveaux utilisateurs ce mois
+                int newUsers = userService.countNewUsersThisMonth();
                 Component statBox2 = createStatBox(
                                 "Nouveaux utilisateurs (mois)",
-                                "12",
+                                String.valueOf(newUsers),
                                 VaadinIcon.USER_CARD);
 
                 // Statistique 3: Utilisateurs actifs
+                double activePercentage = userService.calculateActiveUsersPercentage();
                 Component statBox3 = createStatBox(
                                 "Utilisateurs actifs",
-                                "85%",
+                                String.format("%.1f%%", activePercentage),
                                 VaadinIcon.CHART);
 
                 // Statistique 4: Utilisateur le plus actif
+                String mostActiveUser = userService.getMostActiveUser();
                 Component statBox4 = createStatBox(
                                 "Membre le plus actif",
-                                "M. Martin",
+                                mostActiveUser,
                                 VaadinIcon.STAR);
 
                 statsPanel.add(statBox1, statBox2, statBox3, statBox4);
@@ -678,27 +715,31 @@ public class AdminStatisticsView extends VerticalLayout {
                 statsPanel.setSpacing(true);
 
                 // Statistique 1: Nombre total de documents
+                int totalItems = itemService.countTotalItems();
                 Component statBox1 = createStatBox(
                                 "Nombre total de documents",
-                                "1900",
+                                String.valueOf(totalItems),
                                 VaadinIcon.ARCHIVES);
 
                 // Statistique 2: Acquisitions récentes
+                int recentAcquisitions = itemService.countRecentAcquisitions();
                 Component statBox2 = createStatBox(
                                 "Acquisitions récentes",
-                                "37",
+                                String.valueOf(recentAcquisitions),
                                 VaadinIcon.PLUS_CIRCLE);
 
                 // Statistique 3: Valeur totale de l'inventaire
+                String totalValue = calculateTotalValue();
                 Component statBox3 = createStatBox(
                                 "Valeur de l'inventaire",
-                                "12 500 $ CAD",
+                                totalValue,
                                 VaadinIcon.DOLLAR);
 
                 // Statistique 4: Document le plus populaire
+                String mostPopularItem = itemService.getMostPopularItem();
                 Component statBox4 = createStatBox(
                                 "Document le plus populaire",
-                                "Le Petit Prince",
+                                mostPopularItem,
                                 VaadinIcon.BOOK);
 
                 statsPanel.add(statBox1, statBox2, statBox3, statBox4);

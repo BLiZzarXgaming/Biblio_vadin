@@ -9,11 +9,35 @@ import java.util.Optional;
 
 public interface ItemServiceV2 {
     List<ItemDto> findAll();
+
     Optional<ItemDto> findById(Long id);
+
     List<ItemDto> findByType(String type);
+
     List<ItemDto> searchByTitle(String keyword);
+
     List<ItemDto> findByCategory(Long categoryId);
+
     ItemDto save(ItemDto item);
+
     void deleteById(Long id);
+
     List<ItemDto> fetchItemsWithFilters(Map<String, Object> searchCriteria, String selectedType, int offset, int limit);
+
+    // Méthodes pour les statistiques
+    Map<String, Long> countItemsByType();
+
+    String getMostPopularCategory();
+
+    String getMostBorrowedType();
+
+    double calculateTotalInventoryValue();
+
+    double calculateTotalBorrowedValue();
+
+    int countTotalItems();
+
+    int countRecentAcquisitions();
+
+    String getMostPopularItem();
 }
