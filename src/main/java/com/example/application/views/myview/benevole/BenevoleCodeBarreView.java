@@ -63,10 +63,14 @@ public class BenevoleCodeBarreView extends VerticalLayout {
     // Map pour traduire les statuts
     private final Map<String, String> statusTranslations = new HashMap<>();
 
+    // Map pour traduire les types de documents
+    private final Map<String, String> typeTranslations = new HashMap<>();
+
     public BenevoleCodeBarreView(CopyServiceV2 copyService) {
         this.copyService = copyService;
 
         initStatusTranslations();
+        initTypeTranslations();
 
         setSizeFull();
         setAlignItems(Alignment.CENTER);
@@ -95,11 +99,30 @@ public class BenevoleCodeBarreView extends VerticalLayout {
     }
 
     private void initStatusTranslations() {
+        // Corriger les mappings des statuts entre l'anglais et le français
+        // Ajouter toutes les variantes possibles pour s'assurer que les statuts sont
+        // correctement traduits
         statusTranslations.put("Available", "Disponible");
+        statusTranslations.put("AVAILABLE", "Disponible");
+        statusTranslations.put("available", "Disponible");
+
         statusTranslations.put("Borrowed", "Emprunté");
+        statusTranslations.put("BORROWED", "Emprunté");
+        statusTranslations.put("borrowed", "Emprunté");
+
         statusTranslations.put("Reserved", "Réservé");
+        statusTranslations.put("RESERVED", "Réservé");
+        statusTranslations.put("reserved", "Réservé");
+
         statusTranslations.put("Repair", "En réparation");
+        statusTranslations.put("REPAIR", "En réparation");
+        statusTranslations.put("repair", "En réparation");
+
         statusTranslations.put("Lost", "Perdu");
+        statusTranslations.put("LOST", "Perdu");
+        statusTranslations.put("lost", "Perdu");
+        statusTranslations.put("unavailable", "Indisponible");
+        statusTranslations.put("deleted", "Supprimé");
 
         // Également mapper les versions françaises pour la recherche
         statusTranslations.put("Disponible", "Disponible");
@@ -107,19 +130,84 @@ public class BenevoleCodeBarreView extends VerticalLayout {
         statusTranslations.put("Réservé", "Réservé");
         statusTranslations.put("En réparation", "En réparation");
         statusTranslations.put("Perdu", "Perdu");
+
+        // Journaliser tous les mappings pour le débogage
+        System.out.println("Mappings de traduction des statuts : " + statusTranslations);
     }
 
     private String translateStatus(String status) {
-        return statusTranslations.getOrDefault(status, status);
+        if (status == null) {
+            return "Inconnu";
+        }
+
+        String translated = statusTranslations.get(status);
+
+        // Si la traduction n'est pas trouvée, essayer avec une version modifiée
+        // (majuscules/minuscules)
+        if (translated == null) {
+            translated = statusTranslations.get(status.toUpperCase());
+        }
+        if (translated == null) {
+            translated = statusTranslations.get(status.toLowerCase());
+        }
+
+        // Si toujours pas de traduction, utiliser le statut original
+        if (translated == null) {
+            System.out.println("Aucune traduction trouvée pour le statut : '" + status + "'");
+            return status;
+        }
+
+        return translated;
     }
 
-    private String getOriginalStatus(String translatedStatus) {
-        for (Map.Entry<String, String> entry : statusTranslations.entrySet()) {
-            if (entry.getValue().equals(translatedStatus)) {
-                return entry.getKey();
-            }
+    private void initTypeTranslations() {
+        // Traduction des types de documents
+        typeTranslations.put("book", "Livre");
+        typeTranslations.put("BOOK", "Livre");
+        typeTranslations.put("Book", "Livre");
+
+        typeTranslations.put("magazine", "Magazine");
+        typeTranslations.put("MAGAZINE", "Magazine");
+        typeTranslations.put("Magazine", "Magazine");
+
+        typeTranslations.put("boardgame", "Jeu de société");
+        typeTranslations.put("BOARDGAME", "Jeu de société");
+        typeTranslations.put("Boardgame", "Jeu de société");
+        typeTranslations.put("board_game", "Jeu de société");
+        typeTranslations.put("Board_Game", "Jeu de société");
+
+        typeTranslations.put("dvd", "DVD");
+        typeTranslations.put("DVD", "DVD");
+
+        typeTranslations.put("cd", "CD");
+        typeTranslations.put("CD", "CD");
+
+        // Journaliser les mappings pour le débogage
+        System.out.println("Mappings de traduction des types : " + typeTranslations);
+    }
+
+    private String translateType(String type) {
+        if (type == null) {
+            return "Document";
         }
-        return translatedStatus;
+
+        String translated = typeTranslations.get(type);
+
+        // Si la traduction n'est pas trouvée, essayer avec une version modifiée
+        if (translated == null) {
+            translated = typeTranslations.get(type.toUpperCase());
+        }
+        if (translated == null) {
+            translated = typeTranslations.get(type.toLowerCase());
+        }
+
+        // Si toujours pas de traduction, utiliser le type original
+        if (translated == null) {
+            System.out.println("Aucune traduction trouvée pour le type : '" + type + "'");
+            return type;
+        }
+
+        return translated;
     }
 
     private Component createHeader() {
@@ -170,13 +258,68 @@ public class BenevoleCodeBarreView extends VerticalLayout {
     private Grid<CopyDto> configureGrid() {
         copyGrid.removeAllColumns();
 
-        copyGrid.addColumn(copy -> copy.getId()).setHeader("ID").setAutoWidth(true);
+        // Colonne ID avec lien pour plus de détails
+        copyGrid.addColumn(copy -> copy.getId())
+                .setHeader("ID")
+                .setAutoWidth(true);
+
+        // Colonne titre avec plus d'informations
         copyGrid.addColumn(copy -> {
             ItemDto item = copy.getItem();
-            return item != null ? item.getTitle() : "";
+            if (item == null)
+                return "N/A";
+
+            StringBuilder info = new StringBuilder(item.getTitle());
+
+            // Voir si l'item a des informations supplémentaires spécifiques à son type
+            try {
+                // Obtenir le type d'élément
+                String itemType = item.getType();
+                if ("book".equalsIgnoreCase(itemType)) {
+                    // Essayer d'obtenir des informations spécifiques si disponibles
+                    System.out.println(
+                            "L'élément est un livre, mais nous ne pouvons pas accéder directement à l'auteur.");
+                }
+            } catch (Exception e) {
+                System.out.println("Erreur lors de l'accès aux propriétés de l'item: " + e.getMessage());
+            }
+
+            return info.toString();
         }).setHeader("Titre").setAutoWidth(true);
-        copyGrid.addColumn(copy -> translateStatus(copy.getStatus())).setHeader("Statut").setAutoWidth(true);
-        copyGrid.addColumn(CopyDto::getAcquisitionDate).setHeader("Date d'acquisition").setAutoWidth(true);
+
+        // Colonne pour le type d'item - Avec traduction
+        copyGrid.addColumn(copy -> {
+            ItemDto item = copy.getItem();
+            if (item == null)
+                return "N/A";
+
+            // Utiliser le type de l'item directement avec traduction
+            String itemType = item.getType();
+            return translateType(itemType);
+        }).setHeader("Type").setAutoWidth(true);
+
+        // Colonne de statut avec traduction améliorée
+        copyGrid.addColumn(copy -> {
+            String status = copy.getStatus();
+            String translatedStatus = translateStatus(status);
+
+            // Journaliser pour le débogage
+            System.out.println("Statut original: '" + status + "', traduit: '" + translatedStatus + "'");
+
+            return translatedStatus;
+        }).setHeader("Statut").setAutoWidth(true);
+
+        // Informations supplémentaires sur la copie - sans le prix
+        copyGrid.addColumn(copy -> {
+            StringBuilder info = new StringBuilder();
+
+            // Afficher la date d'acquisition
+            if (copy.getAcquisitionDate() != null) {
+                info.append("Acquis le ").append(copy.getAcquisitionDate());
+            }
+
+            return info.length() > 0 ? info.toString() : "Aucune info";
+        }).setHeader("Détails").setAutoWidth(true);
 
         copyGrid.setSelectionMode(Grid.SelectionMode.MULTI);
         copyGrid.addSelectionListener(event -> {
@@ -248,7 +391,7 @@ public class BenevoleCodeBarreView extends VerticalLayout {
 
     private Page<CopyDto> fetchCopiesPage(Pageable pageable) {
         String searchTerm = searchField.isEmpty() ? null : searchField.getValue().toLowerCase();
-        String status = statusFilter.isEmpty() ? null : getOriginalStatus(statusFilter.getValue());
+        String status = statusFilter.isEmpty() ? null : translateStatus(statusFilter.getValue());
         boolean filterByToday = todayFilter.getValue();
         LocalDate today = filterByToday ? LocalDate.now() : null;
 
@@ -346,7 +489,7 @@ public class BenevoleCodeBarreView extends VerticalLayout {
                     .set("border", "1px solid #ddd")
                     .set("border-radius", "4px")
                     .set("margin", "5px")
-                    .set("width", "200px");
+                    .set("width", "230px"); // Augmenté pour plus d'informations
 
             // Le code-barres contiendra l'ID de la copie préfixé par "C"
             String barcodeValue = "C" + copy.getId();
@@ -354,14 +497,43 @@ public class BenevoleCodeBarreView extends VerticalLayout {
             // Créer le code-barres
             Barcode barcode = new Barcode(barcodeValue, Barcode.Type.code128, "180px", "80px");
 
-            // Informations sur la copie
-            Paragraph copyInfo = new Paragraph(
-                    "Copie ID: " + copy.getId() +
-                            "\nTitre: " + (copy.getItem() != null ? copy.getItem().getTitle() : "N/A") +
-                            "\nStatut: " + translateStatus(copy.getStatus()));
-            copyInfo.getStyle().set("font-size", "12px").set("text-align", "center");
+            // Informations sur la copie - Enrichies
+            StringBuilder detailBuilder = new StringBuilder();
+            detailBuilder.append("Copie ID: ").append(copy.getId());
 
-            barcodeCard.add(barcode, copyInfo);
+            if (copy.getItem() != null) {
+                detailBuilder.append("\nTitre: ").append(copy.getItem().getTitle());
+            } else {
+                detailBuilder.append("\nTitre: N/A");
+            }
+
+            detailBuilder.append("\nStatut: ").append(translateStatus(copy.getStatus()));
+
+            // Ajouter la date d'acquisition
+            if (copy.getAcquisitionDate() != null) {
+                detailBuilder.append("\nAcquis le: ").append(copy.getAcquisitionDate());
+            }
+
+            Paragraph copyInfo = new Paragraph(detailBuilder.toString());
+            copyInfo.getStyle()
+                    .set("font-size", "12px")
+                    .set("text-align", "center")
+                    .set("margin-top", "8px");
+
+            // Ajouter un sous-titre indiquant le type d'élément
+            String itemType = "Document";
+            if (copy.getItem() != null) {
+                String type = copy.getItem().getType();
+                itemType = translateType(type);
+            }
+
+            Paragraph itemTypeInfo = new Paragraph(itemType);
+            itemTypeInfo.getStyle()
+                    .set("font-weight", "bold")
+                    .set("margin", "0")
+                    .set("color", "#1a73e8");
+
+            barcodeCard.add(itemTypeInfo, barcode, copyInfo);
             barcodeContainer.add(barcodeCard);
         }
 
