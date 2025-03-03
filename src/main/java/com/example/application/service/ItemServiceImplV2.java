@@ -96,6 +96,7 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
                             : null,
                     searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId()
                             : null,
+                    searchCriteria.get("year") != null ? (Integer) searchCriteria.get("year") : null,
                     pageable).stream().map(itemMapper::toDto).collect(Collectors.toList());
         } else if ("Jeu".equals(selectedType)) { // BoardGame
             return itemRepository.findBoardGameByCriteriaWithPagination(

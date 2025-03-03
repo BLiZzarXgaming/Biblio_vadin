@@ -51,6 +51,7 @@ public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
                         "    (:title IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :title, '%'))) AND " +
                         "    (:isni IS NULL OR m.isni = :isni OR :isni = '') AND " +
                         "    (:month IS NULL OR m.month = :month OR :month = '') AND " +
+                        "    (:year IS NULL OR m.year = :year) AND " +
                         "    (:publicationDate IS NULL OR m.publication_date = :publicationDate) AND " +
                         "    (:category IS NULL OR i.category = :category) AND " +
                         "    (:publisher IS NULL OR i.publisher_id = :publisher) ", nativeQuery = true)
@@ -60,6 +61,7 @@ public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
                         @Param("publicationDate") LocalDate publicationDate,
                         @Param("category") Long category,
                         @Param("publisher") Long publisher,
+                        @Param("year") Integer year,
                         Pageable pageable);
 
         @Query(value = "SELECT i.* FROM items i " +
