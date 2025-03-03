@@ -1,6 +1,8 @@
 package com.example.application.repository;
 
 import com.example.application.entity.Copy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.time.LocalDate;
 
 @Repository
 public interface CopyRepositoryV2 extends JpaRepository<Copy, Long> {
@@ -55,4 +58,32 @@ public interface CopyRepositoryV2 extends JpaRepository<Copy, Long> {
 
         @Query(value = "SELECT SUM(i.value) FROM copies c inner join loans l on c.id = l.copy_id JOIN items i ON i.id = c.item_id WHERE l.loan_date BETWEEN :startDate AND :endDate", nativeQuery = true)
         double calculateTotalBorrowedValue(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+        Page<Copy> findAll(Pageable pageable);
+
+        @Query("SELECT c FROM Copy c WHERE CAST(c.id AS string) LIKE %:searchTerm% OR LOWER(c.item.title) LIKE %:searchTerm%")
+        Page<Copy> findByIdContainingOrTitleContaining(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+        @Query("SELECT c FROM Copy c WHERE c.status = :status")
+        Page<Copy> findByStatus(@Param("status") String status, Pageable pageable);
+
+        @Query("SELECT c FROM Copy c WHERE (CAST(c.id AS string) LIKE %:searchTerm% OR LOWER(c.item.title) LIKE %:searchTerm%) AND c.status = :status")
+        Page<Copy> findByIdContainingOrTitleContainingAndStatus(@Param("searchTerm") String searchTerm,
+                        @Param("status") String status, Pageable pageable);
+
+        @Query("SELECT c FROM Copy c WHERE c.acquisitionDate = :today")
+        Page<Copy> findByAcquisitionDate(@Param("today") LocalDate today, Pageable pageable);
+
+        @Query("SELECT c FROM Copy c WHERE (CAST(c.id AS string) LIKE %:searchTerm% OR LOWER(c.item.title) LIKE %:searchTerm%) AND c.acquisitionDate = :today")
+        Page<Copy> findByIdContainingOrTitleContainingAndAcquisitionDate(@Param("searchTerm") String searchTerm,
+                        @Param("today") LocalDate today, Pageable pageable);
+
+        @Query("SELECT c FROM Copy c WHERE c.status = :status AND c.acquisitionDate = :today")
+        Page<Copy> findByStatusAndAcquisitionDate(@Param("status") String status, @Param("today") LocalDate today,
+                        Pageable pageable);
+
+        @Query("SELECT c FROM Copy c WHERE (CAST(c.id AS string) LIKE %:searchTerm% OR LOWER(c.item.title) LIKE %:searchTerm%) AND c.status = :status AND c.acquisitionDate = :today")
+        Page<Copy> findByIdContainingOrTitleContainingAndStatusAndAcquisitionDate(
+                        @Param("searchTerm") String searchTerm, @Param("status") String status,
+                        @Param("today") LocalDate today, Pageable pageable);
 }

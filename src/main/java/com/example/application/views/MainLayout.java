@@ -11,6 +11,7 @@ import com.example.application.views.myview.admin.AdminManagementView;
 import com.example.application.views.myview.admin.AdminStatisticsView;
 import com.example.application.views.myview.benevole.BenevoleAjouterView;
 import com.example.application.views.myview.benevole.BenevoleCatalogueView;
+import com.example.application.views.myview.benevole.BenevoleCodeBarreView;
 import com.example.application.views.myview.benevole.BenevoleEmpruntView;
 import com.example.application.views.myview.benevole.BenevoleHomeView;
 import com.example.application.views.myview.benevole.BenevoleListeMembresView;
@@ -132,6 +133,7 @@ public class MainLayout extends AppLayout {
         nav.addItem(new SideNavItem("Membres", BenevoleListeMembresView.class));
         nav.addItem(new SideNavItem("Réservations", BenevoleListeReservationView.class));
         nav.addItem(new SideNavItem("Retards", BenevoleRetardsView.class));
+        nav.addItem(new SideNavItem("Codes-barres", BenevoleCodeBarreView.class));
 
         return nav;
     }
