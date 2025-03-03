@@ -21,6 +21,7 @@ import com.example.application.views.myview.membre.MembreCatalogueView;
 import com.example.application.views.myview.membre.MembreEmpruntsView;
 import com.example.application.views.myview.membre.MembreHistoriqueEmpruntView;
 import com.example.application.views.myview.membre.MembreReservationsView;
+import com.example.application.views.myview.membre.MembreCodeBarreView;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
@@ -116,6 +117,7 @@ public class MainLayout extends AppLayout {
         nav.addItem(new SideNavItem("Mes emprunts", MembreEmpruntsView.class));
         nav.addItem(new SideNavItem("Mes réservations", MembreReservationsView.class));
         nav.addItem(new SideNavItem("Mon historique", MembreHistoriqueEmpruntView.class));
+        nav.addItem(new SideNavItem("Mon code membre", MembreCodeBarreView.class));
 
         return nav;
     }
