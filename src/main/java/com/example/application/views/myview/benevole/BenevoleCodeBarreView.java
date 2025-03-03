@@ -11,6 +11,7 @@ import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
@@ -35,6 +36,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.vaadin.barcodes.Barcode;
+import com.vaadin.flow.component.UI;
+import com.vaadin.flow.server.StreamResource;
+import com.vaadin.flow.server.VaadinSession;
+import java.util.UUID;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -43,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 @PageTitle("Génération de Codes-barres")
 @Route(value = "volonteer/codesbarres", layout = MainLayout.class)
@@ -449,22 +456,139 @@ public class BenevoleCodeBarreView extends VerticalLayout {
     }
 
     private Component createPrintButton() {
-        Button printButton = new Button("Imprimer", new Icon(VaadinIcon.PRINT));
-        printButton.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
-        printButton.addClickListener(event -> {
-            if (barcodeContainer.getChildren().count() > 0) {
-                // JavaScript pour impression
-                getUI().ifPresent(ui -> ui.getPage().executeJs(
-                        "const originalTitle = document.title;" +
-                                "document.title = 'Codes-barres des Copies';" +
-                                "window.print();" +
-                                "setTimeout(() => {document.title = originalTitle;}, 100);"));
-            } else {
-                Notification.show("Aucun code-barre à imprimer", 3000, Notification.Position.MIDDLE);
+        Button printButton = new Button("Imprimer les codes-barres");
+        printButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        printButton.setIcon(VaadinIcon.PRINT.create());
+        printButton.addClickListener(e -> {
+            if (selectedCopies.isEmpty()) {
+                Notification notification = Notification.show(
+                        "Veuillez sélectionner au moins une copie",
+                        3000,
+                        Notification.Position.MIDDLE);
+                notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
             }
+
+            // Générer une page HTML imprimable
+            generatePrintableBarcodesPage();
         });
 
         return printButton;
+    }
+
+    /**
+     * Génère une page HTML contenant les codes-barres sélectionnés
+     * dans un format imprimable (6 codes-barres par page, taille fixe).
+     */
+    private void generatePrintableBarcodesPage() {
+        if (selectedCopies.isEmpty()) {
+            Notification.show("Veuillez sélectionner au moins une copie",
+                    3000, Notification.Position.MIDDLE)
+                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
+
+        // Créer un StreamResource pour la page HTML
+        StreamResource resource = new StreamResource("codes-barres.html", () -> {
+            StringBuilder html = new StringBuilder();
+            html.append("<!DOCTYPE html>");
+            html.append("<html lang='fr'>");
+            html.append("<head>");
+            html.append("<meta charset='UTF-8'>");
+            html.append("<title>Codes-barres - Bibliothèque</title>");
+            html.append("<style>");
+            html.append("@media print {");
+            html.append("  @page { size: A4; margin: 1cm; }");
+            html.append("  body { font-family: Arial, sans-serif; }");
+            html.append("  .page-break { page-break-after: always; }");
+            html.append("  .no-print-break { page-break-inside: avoid; }");
+            html.append("  .barcode-container { display: flex; flex-wrap: wrap; justify-content: space-around; }");
+            html.append(
+                    "  .barcode-card { width: 8cm; height: 4cm; margin: 0.5cm; border: 1px solid #ccc; padding: 0.3cm; text-align: center; page-break-inside: avoid; }");
+            html.append("  .barcode-title { font-weight: bold; font-size: 12pt; margin-bottom: 0.2cm; }");
+            html.append("  .barcode-type { font-size: 10pt; color: #1a73e8; margin-bottom: 0.2cm; }");
+            html.append("  .barcode-details { font-size: 8pt; margin-top: 0.2cm; }");
+            html.append("  .barcode-image { width: 7cm; height: 1.5cm; }");
+            html.append("  .button-bar { display: none; }");
+            html.append("}");
+            html.append("body { font-family: Arial, sans-serif; }");
+            html.append(
+                    ".button-bar { padding: 10px; background: #f5f5f5; position: fixed; bottom: 0; width: 100%; text-align: center; }");
+            html.append(
+                    ".button-bar button { padding: 8px 15px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; }");
+            html.append(
+                    ".barcode-container { display: flex; flex-wrap: wrap; justify-content: space-around; margin-bottom: 50px; }");
+            html.append(
+                    ".barcode-card { width: 8cm; height: 4cm; margin: 0.5cm; border: 1px solid #ccc; padding: 0.3cm; text-align: center; }");
+            html.append(".barcode-title { font-weight: bold; font-size: 12pt; margin-bottom: 0.2cm; }");
+            html.append(".barcode-type { font-size: 10pt; color: #1a73e8; margin-bottom: 0.2cm; }");
+            html.append(".barcode-details { font-size: 8pt; margin-top: 0.2cm; }");
+            html.append(".barcode-image { width: 7cm; height: 1.5cm; }");
+            html.append("</style>");
+            html.append("<script>");
+            html.append("window.onload = function() {");
+            html.append("  window.print();");
+            html.append("};");
+            html.append("</script>");
+            html.append("</head>");
+            html.append("<body>");
+            html.append("<h1 style='text-align: center;'>Codes-barres Bibliothèque</h1>");
+            html.append("<div class='barcode-container'>");
+
+            // Générer les codes-barres
+            for (CopyDto copy : selectedCopies) {
+                String barcodeValue = copy.getId().toString();
+                String title = "";
+                String itemType = "Document";
+
+                if (copy.getItem() != null) {
+                    title = copy.getItem().getTitle();
+                    // Limiter la longueur du titre
+                    if (title.length() > 30) {
+                        title = title.substring(0, 27) + "...";
+                    }
+
+                    String type = copy.getItem().getType();
+                    itemType = translateType(type);
+                }
+
+                html.append("<div class='barcode-card no-print-break'>");
+                html.append("<div class='barcode-type'>").append(itemType).append("</div>");
+                html.append("<div class='barcode-title'>").append(title).append("</div>");
+
+                // Le code SVG de l'image du code-barres
+                // Nous utilisons un lien d'API qui génère le code-barres
+                html.append("<img class='barcode-image' src='https://bwipjs-api.metafloor.com/?bcid=code128&text=")
+                        .append(barcodeValue).append("&scale=3&includetext'>");
+
+                html.append("<div class='barcode-details'>");
+                html.append("ID: ").append(copy.getId());
+                html.append("</div>");
+                html.append("</div>");
+            }
+
+            html.append("</div>");
+            html.append("<div class='button-bar'>");
+            html.append("<button onclick='window.print();'>Imprimer les codes-barres</button>");
+            html.append("</div>");
+            html.append("</body>");
+            html.append("</html>");
+
+            return new ByteArrayInputStream(html.toString().getBytes(StandardCharsets.UTF_8));
+        });
+
+        // Créer un lien de téléchargement qui s'ouvre dans une nouvelle fenêtre
+        Anchor printLink = new Anchor(resource, "");
+        printLink.setTarget("_blank");
+        printLink.getElement().setAttribute("hidden", true);
+        add(printLink);
+
+        // Cliquer automatiquement sur le lien pour ouvrir la page d'impression
+        UI.getCurrent().getPage().executeJs("$0.click()", printLink.getElement());
+
+        Notification.show(selectedCopies.size() + " code(s)-barre(s) généré(s) pour impression",
+                3000, Notification.Position.MIDDLE)
+                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
     }
 
     private void generateBarcodes() {
