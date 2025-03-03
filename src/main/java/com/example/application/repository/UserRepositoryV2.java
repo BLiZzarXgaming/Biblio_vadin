@@ -6,7 +6,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +27,8 @@ public interface UserRepositoryV2 extends JpaRepository<User, Long> {
      * @param date Date à partir de laquelle compter les utilisateurs
      * @return Le nombre d'utilisateurs créés depuis la date spécifiée
      */
-    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :date")
-    long countUsersCreatedSince(@Param("date") Date date);
+    @Query(value = "SELECT COUNT(*) FROM users WHERE created_at >= FROM_UNIXTIME(:date/1000)", nativeQuery = true)
+    long countUsersCreatedSince(@Param("date") long date);
 
     /**
      * Trouve les utilisateurs actifs qui ont au moins un emprunt dans l'année
@@ -35,8 +37,10 @@ public interface UserRepositoryV2 extends JpaRepository<User, Long> {
      *             en arrière)
      * @return Le nombre d'utilisateurs distincts ayant effectué au moins un emprunt
      */
-    @Query("SELECT COUNT(DISTINCT u.id) FROM User u JOIN Loan l ON u.id = l.member.id WHERE l.loanDate >= :date")
-    long countActiveUsersSince(@Param("date") Date date);
+    @Query(value = "SELECT COUNT(DISTINCT u.id) FROM users u " +
+            "JOIN loans l ON u.id = l.member_id " +
+            "WHERE l.loan_date >= FROM_UNIXTIME(:date/1000)", nativeQuery = true)
+    long countActiveUsersSince(@Param("date") long date);
 
     /**
      * Trouve l'utilisateur avec le plus d'emprunts dans une période donnée
@@ -45,12 +49,12 @@ public interface UserRepositoryV2 extends JpaRepository<User, Long> {
      *             en arrière)
      * @return L'utilisateur avec le plus d'emprunts et le nombre d'emprunts
      */
-    @Query("SELECT u.username, u.firstName, u.lastName, COUNT(l.id) AS loanCount FROM User u " +
-            "JOIN Loan l ON u.id = l.member.id " +
-            "WHERE l.loanDate >= :date " +
-            "GROUP BY u.id, u.username, u.firstName, u.lastName " +
-            "ORDER BY loanCount DESC")
-    List<Object[]> findMostActiveUsersSince(@Param("date") Date date);
+    @Query(value = "SELECT u.username, u.first_name, u.last_name, COUNT(l.id) AS loan_count FROM users u " +
+            "JOIN loans l ON u.id = l.member_id " +
+            "WHERE l.loan_date >= FROM_UNIXTIME(:date/1000) " +
+            "GROUP BY u.id, u.username, u.first_name, u.last_name " +
+            "ORDER BY loan_count DESC", nativeQuery = true)
+    List<Object[]> findMostActiveUsersSince(@Param("date") long date);
 
     User findByEmail(String email);
 }

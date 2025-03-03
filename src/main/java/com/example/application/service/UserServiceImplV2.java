@@ -4,9 +4,12 @@ import com.example.application.entity.DTO.UserDto;
 import com.example.application.entity.Mapper.UserMapper;
 import com.example.application.repository.UserRepositoryV2;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.DateUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
@@ -68,15 +71,15 @@ public class UserServiceImplV2 implements UserServiceV2 {
 
         // Compter le nombre d'utilisateurs par rôle
         usersByRole.put("Membres", allUsers.stream()
-                .filter(user -> user.getRole() != null && "ROLE_MEMBRE".equals(user.getRole().getName()))
+                .filter(user -> user.getRole() != null && "Membre".equals(user.getRole().getName()))
                 .count());
 
         usersByRole.put("Bénévoles", allUsers.stream()
-                .filter(user -> user.getRole() != null && "ROLE_BENEVOLE".equals(user.getRole().getName()))
+                .filter(user -> user.getRole() != null && "Bénévole".equals(user.getRole().getName()))
                 .count());
 
         usersByRole.put("Administrateurs", allUsers.stream()
-                .filter(user -> user.getRole() != null && "ROLE_ADMINISTRATEUR".equals(user.getRole().getName()))
+                .filter(user -> user.getRole() != null && "Administrateur".equals(user.getRole().getName()))
                 .count());
 
         return usersByRole;
@@ -91,9 +94,9 @@ public class UserServiceImplV2 implements UserServiceV2 {
     public int countNewUsersThisMonth() {
         try {
             // Récupérer les données du mois courant
-            Date firstDayOfMonth = Date.from(LocalDate.now().withDayOfMonth(1)
-                    .atStartOfDay(ZoneId.systemDefault()).toInstant());
-            return (int) userRepository.countUsersCreatedSince(firstDayOfMonth);
+            Instant firstDayOfMonth = LocalDate.now().withDayOfMonth(1)
+                    .atStartOfDay(ZoneId.systemDefault()).toInstant();
+            return (int) userRepository.countUsersCreatedSince(firstDayOfMonth.toEpochMilli());
         } catch (Exception e) {
             LOGGER.warning("Erreur lors du comptage des nouveaux utilisateurs: " + e.getMessage());
             return 0;
@@ -108,9 +111,9 @@ public class UserServiceImplV2 implements UserServiceV2 {
                 return 0.0;
 
             // Récupérer les utilisateurs actifs depuis un an
-            Date oneYearAgo = Date.from(LocalDate.now().minusYears(1)
-                    .atStartOfDay(ZoneId.systemDefault()).toInstant());
-            long activeUsers = userRepository.countActiveUsersSince(oneYearAgo);
+            Instant oneYearAgo = LocalDate.now().minusYears(1)
+                    .atStartOfDay(ZoneId.systemDefault()).toInstant();
+            long activeUsers = userRepository.countActiveUsersSince(oneYearAgo.toEpochMilli());
 
             return (double) activeUsers / totalUsers * 100;
         } catch (Exception e) {
@@ -123,9 +126,9 @@ public class UserServiceImplV2 implements UserServiceV2 {
     public String getMostActiveUser() {
         try {
             // Récupérer les données d'un an en arrière
-            Date oneYearAgo = Date.from(LocalDate.now().minusYears(1)
-                    .atStartOfDay(ZoneId.systemDefault()).toInstant());
-            List<Object[]> results = userRepository.findMostActiveUsersSince(oneYearAgo);
+            Instant oneYearAgo = LocalDate.now().minusYears(1)
+                    .atStartOfDay(ZoneId.systemDefault()).toInstant();
+            List<Object[]> results = userRepository.findMostActiveUsersSince(oneYearAgo.toEpochMilli());
 
             if (results != null && !results.isEmpty()) {
                 Object[] mostActive = results.get(0);

@@ -25,9 +25,6 @@ public interface LoanServiceV2 {
 
     void deleteById(Long id);
 
-    // Méthodes pour les statistiques
-    int countReservations();
-
     Map<String, Integer> getLoansByMonth();
 
     Map<String, Integer> getLoansByStatus();

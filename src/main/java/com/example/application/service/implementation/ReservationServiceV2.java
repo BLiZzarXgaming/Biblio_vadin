@@ -61,4 +61,6 @@ public interface ReservationServiceV2 {
      * @return La réservation mise à jour
      */
     ReservationDto markAsNotReady(Long reservationId);
+
+    int countReservations();
 }

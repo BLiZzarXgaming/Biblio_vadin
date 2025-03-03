@@ -64,7 +64,8 @@ public class Availability {
     public Availability() {
     }
 
-    public Availability(Long id, User user, String title, LocalDate date, LocalTime time, Integer duration, String details, String type, String status) {
+    public Availability(Long id, User user, String title, LocalDate date, LocalTime time, Integer duration,
+            String details, String type, String status) {
         this.id = id;
         this.user = user;
         this.title = title;

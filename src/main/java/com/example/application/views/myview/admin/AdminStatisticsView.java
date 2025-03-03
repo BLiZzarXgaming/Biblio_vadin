@@ -2,8 +2,10 @@ package com.example.application.views.myview.admin;
 
 import com.example.application.entity.DTO.LoanDto;
 import com.example.application.service.implementation.LoanServiceV2;
+import com.example.application.service.implementation.ReservationServiceV2;
 import com.example.application.service.implementation.UserServiceV2;
 import com.example.application.service.implementation.ItemServiceV2;
+import com.example.application.utils.DateUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
@@ -69,16 +71,18 @@ public class AdminStatisticsView extends VerticalLayout {
         private final LoanServiceV2 loanService;
         private final UserServiceV2 userService;
         private final ItemServiceV2 itemService;
+        private final ReservationServiceV2 reservationService;
 
         private VerticalLayout contentLayout;
         private LocalDate startDate;
         private LocalDate endDate;
 
         @Autowired
-        public AdminStatisticsView(LoanServiceV2 loanService, UserServiceV2 userService, ItemServiceV2 itemService) {
+        public AdminStatisticsView(LoanServiceV2 loanService, UserServiceV2 userService, ItemServiceV2 itemService , ReservationServiceV2 reservationService) {
                 this.loanService = loanService;
                 this.userService = userService;
                 this.itemService = itemService;
+                this.reservationService = reservationService;
 
                 setSizeFull();
                 setPadding(true);
@@ -628,7 +632,7 @@ public class AdminStatisticsView extends VerticalLayout {
          */
         private String calculateMostPopularCategory(List<LoanDto> loans) {
                 // Utiliser le service pour obtenir la catégorie la plus populaire
-                return itemService.getMostPopularCategory();
+                return itemService.getMostPopularCategory(DateUtils.convertToDateViaInstant(startDate) , DateUtils.convertToDateViaInstant(endDate));
         }
 
         /**
@@ -636,12 +640,12 @@ public class AdminStatisticsView extends VerticalLayout {
          */
         private String calculateMostBorrowedType(List<LoanDto> loans) {
                 // Utiliser le service pour obtenir le type le plus emprunté
-                return itemService.getMostBorrowedType();
+                return itemService.getMostBorrowedType(DateUtils.convertToDateViaInstant(startDate) , DateUtils.convertToDateViaInstant(endDate));
         }
 
         private String calculateTotalBorrowedValue() {
                 // Utiliser le service pour obtenir la valeur totale des emprunts
-                return String.format("%,.0f $ CAD", itemService.calculateTotalBorrowedValue());
+                return String.format("%,.0f $ CAD", itemService.calculateTotalBorrowedValue(DateUtils.convertToDateViaInstant(startDate) , DateUtils.convertToDateViaInstant(endDate)));
         }
 
         /**
@@ -659,7 +663,7 @@ public class AdminStatisticsView extends VerticalLayout {
          */
         private int calculateReservationsCount() {
                 // Utiliser le service pour compter les réservations
-                return loanService.countReservations();
+                return reservationService.countReservations();
         }
 
         /**
@@ -736,7 +740,7 @@ public class AdminStatisticsView extends VerticalLayout {
                                 VaadinIcon.DOLLAR);
 
                 // Statistique 4: Document le plus populaire
-                String mostPopularItem = itemService.getMostPopularItem();
+                String mostPopularItem = itemService.getMostPopularItem(DateUtils.convertToDateViaInstant(startDate) , DateUtils.convertToDateViaInstant(endDate));
                 Component statBox4 = createStatBox(
                                 "Document le plus populaire",
                                 mostPopularItem,

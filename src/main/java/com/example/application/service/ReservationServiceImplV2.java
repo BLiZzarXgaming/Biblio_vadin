@@ -10,10 +10,15 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Service
 public class ReservationServiceImplV2 implements ReservationServiceV2 {
+
+    private static final Logger LOGGER = Logger.getLogger(LoanServiceImplV2.class.getName());
+
     private final ReservationRepositoryV2 reservationRepository;
     private final ReservationMapper reservationMapper;
     private final UserMapper userMapper;
@@ -112,5 +117,17 @@ public class ReservationServiceImplV2 implements ReservationServiceV2 {
             return save(reservation);
         }
         throw new IllegalArgumentException("Réservation non trouvée avec l'ID: " + reservationId);
+    }
+
+    @Override
+    public int countReservations() {
+        try {
+            int count = (int) reservationRepository.countReservations();
+            // Si aucune réservation, ne pas retourner de valeur par défaut
+            return count;
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Erreur lors du comptage des réservations", e);
+            return 0;
+        }
     }
 }

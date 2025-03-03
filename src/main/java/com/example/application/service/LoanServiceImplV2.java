@@ -74,18 +74,6 @@ public class LoanServiceImplV2 implements LoanServiceV2 {
     // Implémentation des méthodes de statistiques
 
     @Override
-    public int countReservations() {
-        try {
-            int count = (int) loanRepository.countReservations();
-            // Si aucune réservation, ne pas retourner de valeur par défaut
-            return count;
-        } catch (Exception e) {
-            LOGGER.warning("Erreur lors du comptage des réservations: " + e.getMessage());
-            return 0;
-        }
-    }
-
-    @Override
     public Map<String, Integer> getLoansByMonth() {
         try {
             // Récupérer les données de l'année en cours

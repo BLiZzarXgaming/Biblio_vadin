@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.Date;
 import java.util.Objects;
 
 /**
@@ -48,7 +49,9 @@ public class UserDto implements Serializable {
     public UserDto() {
     }
 
-    public UserDto(Long id, String firstName, String lastName, String username, String email, Instant emailVerifiedAt, String status, String password, String phoneNumber, String cellNumber, Boolean isChild, RoleDto role, Instant dateOfBirth, String rememberToken, Instant createdAt, Instant updatedAt) {
+    public UserDto(Long id, String firstName, String lastName, String username, String email, Instant emailVerifiedAt,
+            String status, String password, String phoneNumber, String cellNumber, Boolean isChild, RoleDto role,
+            Instant dateOfBirth, String rememberToken, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -197,8 +200,10 @@ public class UserDto implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         UserDto entity = (UserDto) o;
         return Objects.equals(this.id, entity.id) &&
                 Objects.equals(this.firstName, entity.firstName) &&
@@ -220,7 +225,8 @@ public class UserDto implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, firstName, lastName, username, email, emailVerifiedAt, status, password, phoneNumber, cellNumber, isChild, role, dateOfBirth, rememberToken, createdAt, updatedAt);
+        return Objects.hash(id, firstName, lastName, username, email, emailVerifiedAt, status, password, phoneNumber,
+                cellNumber, isChild, role, dateOfBirth, rememberToken, createdAt, updatedAt);
     }
 
     @Override

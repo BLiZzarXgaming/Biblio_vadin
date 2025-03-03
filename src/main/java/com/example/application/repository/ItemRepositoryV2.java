@@ -100,7 +100,7 @@ public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
         /**
          * Trouve la catégorie la plus populaire basée sur le nombre d'emprunts
          * 
-         * @param date Date à partir de laquelle compter les emprunts (généralement 1 an
+         * @param startDate Date à partir de laquelle compter les emprunts (généralement 1 an
          *             en arrière)
          * @return La catégorie la plus populaire et son nombre d'emprunts
          */
@@ -109,16 +109,16 @@ public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
                         "JOIN items i ON c.id = i.category " +
                         "JOIN copies cp ON i.id = cp.item_id " +
                         "JOIN loans l ON cp.id = l.copy_id " +
-                        "WHERE l.loan_date >= :date " +
+                        "WHERE l.loan_date BETWEEN :startDate AND :endDate " +
                         "GROUP BY c.id, c.name " +
                         "ORDER BY loan_count DESC " +
                         "LIMIT 1", nativeQuery = true)
-        Object[] findMostPopularCategorySince(@Param("date") Date date);
+        Object[] findMostPopularCategorySince(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
 
         /**
          * Trouve le type de document le plus emprunté
          * 
-         * @param date Date à partir de laquelle compter les emprunts (généralement 1 an
+         * @param startDate Date à partir de laquelle compter les emprunts (généralement 1 an
          *             en arrière)
          * @return Le type le plus emprunté et son nombre d'emprunts
          */
@@ -126,16 +126,16 @@ public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
                         "FROM items i " +
                         "JOIN copies cp ON i.id = cp.item_id " +
                         "JOIN loans l ON cp.id = l.copy_id " +
-                        "WHERE l.loan_date >= :date " +
+                        "WHERE l.loan_date BETWEEN :startDate AND :endDate " +
                         "GROUP BY i.type " +
                         "ORDER BY loan_count DESC " +
                         "LIMIT 1", nativeQuery = true)
-        Object[] findMostBorrowedTypeSince(@Param("date") Date date);
+        Object[] findMostBorrowedTypeSince(@Param("startDate") Date startDate,@Param("endDate") Date endDate);
 
         /**
          * Trouve le document le plus populaire basé sur le nombre d'emprunts
          * 
-         * @param date Date à partir de laquelle compter les emprunts (généralement 1 an
+         * @param startDate Date à partir de laquelle compter les emprunts (généralement 1 an
          *             en arrière)
          * @return Le document le plus populaire et son nombre d'emprunts
          */
@@ -143,9 +143,15 @@ public interface ItemRepositoryV2 extends JpaRepository<Item, Long> {
                         "FROM items i " +
                         "JOIN copies cp ON i.id = cp.item_id " +
                         "JOIN loans l ON cp.id = l.copy_id " +
-                        "WHERE l.loan_date >= :date " +
+                        "WHERE l.loan_date BETWEEN :startDate AND :endDate " +
                         "GROUP BY i.id, i.title, i.type " +
                         "ORDER BY loan_count DESC " +
                         "LIMIT 1", nativeQuery = true)
-        Object[] findMostPopularItemSince(@Param("date") Date date);
+        Object[] findMostPopularItemSince(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
+
+        @Query(value = "SELECT COUNT(DISTINCT i.id) FROM items i INNER JOIN copies c ON c.item_id = i.id WHERE c.status <> 'deleted'", nativeQuery = true)
+        int countItemByCopies();
+
+        @Query(value = "SELECT DISTINCT i.* FROM items i INNER JOIN copies c ON c.item_id = i.id WHERE c.status <> 'deleted'", nativeQuery = true)
+        List<Item> findAllItemByType();
 }

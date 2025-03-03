@@ -3,6 +3,7 @@ package com.example.application.service.implementation;
 import com.example.application.entity.DTO.ItemDto;
 import com.example.application.entity.Item;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,17 +28,17 @@ public interface ItemServiceV2 {
     // Méthodes pour les statistiques
     Map<String, Long> countItemsByType();
 
-    String getMostPopularCategory();
+    String getMostPopularCategory(Date startDate, Date endDate);
 
-    String getMostBorrowedType();
+    String getMostBorrowedType(Date startDate, Date endDate);
 
     double calculateTotalInventoryValue();
 
-    double calculateTotalBorrowedValue();
+    double calculateTotalBorrowedValue(Date startDate, Date endDate);
 
     int countTotalItems();
 
     int countRecentAcquisitions();
 
-    String getMostPopularItem();
+    String getMostPopularItem(Date startDate, Date endDate);
 }

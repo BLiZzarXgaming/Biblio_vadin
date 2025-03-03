@@ -36,4 +36,11 @@ public interface ReservationRepositoryV2 extends JpaRepository<Reservation, Long
             "AND r.status = 'reserved' " +
             "AND r.copy.id NOT IN (SELECT l.copy.id FROM Loan l WHERE l.status = 'borrowed')")
     List<Reservation> findReadyForPreparationReservationsByMember(@Param("memberId") Long memberId);
+
+    /**
+     * Compte le nombre de réservations (prêts avec statut "RESERVED" mais pas
+     * "ANNULE")
+     */
+    @Query("SELECT COUNT(l) FROM Reservation l WHERE l.status != 'cancelled'")
+    long countReservations();
 }

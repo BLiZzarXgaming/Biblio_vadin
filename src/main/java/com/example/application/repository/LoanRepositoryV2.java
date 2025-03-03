@@ -22,12 +22,7 @@ public interface LoanRepositoryV2 extends JpaRepository<Loan, Long> {
 
     // Nouvelles méthodes pour les statistiques
 
-    /**
-     * Compte le nombre de réservations (prêts avec statut "RESERVED" mais pas
-     * "ANNULE")
-     */
-    @Query("SELECT COUNT(l) FROM Loan l WHERE l.status = 'RESERVED' AND l.status != 'ANNULE'")
-    long countReservations();
+
 
     /**
      * Compte le nombre de prêts par mois pour une période donnée

@@ -125,30 +125,29 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
     @Override
     public Map<String, Long> countItemsByType() {
         Map<String, Long> itemsByType = new HashMap<>();
-        List<ItemDto> allItems = findAll();
+        List<ItemDto> allItems = itemRepository.findAllItemByType().stream().map(itemMapper::toDto)
+                .toList();
 
         // Compter le nombre de documents par type
         itemsByType.put("Livres", allItems.stream()
-                .filter(item -> "BOOK".equals(item.getType()))
+                .filter(item -> "book".equals(item.getType()))
                 .count());
 
         itemsByType.put("Magazines", allItems.stream()
-                .filter(item -> "MAGAZINE".equals(item.getType()))
+                .filter(item -> "magazine".equals(item.getType()))
                 .count());
 
         itemsByType.put("Jeux de société", allItems.stream()
-                .filter(item -> "BOARD_GAME".equals(item.getType()))
+                .filter(item -> "board_game".equals(item.getType()))
                 .count());
 
         return itemsByType;
     }
 
     @Override
-    public String getMostPopularCategory() {
+    public String getMostPopularCategory(Date startDate, Date endDate) {
         try {
-            // Utiliser la méthode du repository pour trouver la catégorie la plus populaire
-            Date oneYearAgo = Date.from(LocalDate.now().minusYears(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
-            Object[] result = itemRepository.findMostPopularCategorySince(oneYearAgo);
+            Object[] result = itemRepository.findMostPopularCategorySince(startDate, endDate);
 
             if (result != null && result.length > 0 && result[0] != null) {
                 Object[] categoryData = (Object[]) result[0];
@@ -171,11 +170,9 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
     }
 
     @Override
-    public String getMostBorrowedType() {
+    public String getMostBorrowedType(Date startDate, Date endDate) {
         try {
-            // Utiliser la méthode du repository pour trouver le type le plus emprunté
-            Date oneYearAgo = Date.from(LocalDate.now().minusYears(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
-            Object[] result = itemRepository.findMostBorrowedTypeSince(oneYearAgo);
+            Object[] result = itemRepository.findMostBorrowedTypeSince(startDate, endDate);
 
             if (result != null && result.length > 0 && result[0] != null) {
                 Object[] typeData = (Object[]) result[0];
@@ -224,13 +221,8 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
     }
 
     @Override
-    public double calculateTotalBorrowedValue() {
+    public double calculateTotalBorrowedValue(Date startDate, Date endDate) {
         try {
-
-            Date startDate = Date
-                    .from(LocalDate.now().withDayOfYear(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
-            Date endDate = Date.from(LocalDate.now().withDayOfYear(LocalDate.now().lengthOfYear())
-                    .atStartOfDay(ZoneId.systemDefault()).toInstant());
 
             // Utiliser la méthode du repository pour calculer la valeur totale des emprunts
             return copyRepository.calculateTotalBorrowedValue(startDate, endDate);
@@ -242,7 +234,7 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
 
     @Override
     public int countTotalItems() {
-        return (int) itemRepository.count();
+        return (int) itemRepository.countItemByCopies();
     }
 
     @Override
@@ -259,30 +251,32 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
     }
 
     @Override
-    public String getMostPopularItem() {
+    public String getMostPopularItem(Date startDate, Date endDate) {
         try {
             // Utiliser la méthode du repository pour trouver l'item le plus emprunté
-            Date oneYearAgo = Date.from(LocalDate.now().minusYears(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
-            Object[] result = itemRepository.findMostPopularItemSince(oneYearAgo);
 
-            if (result != null && result.length > 2) {
+            Object[] result = itemRepository.findMostPopularItemSince(startDate, endDate);
+
+            if (result != null && result.length > 0 && result[0] != null) {
+                Object[] itemData = (Object[]) result[0];
+
                 // Extraire les informations: [id, title, type, count]
-                String title = (result[1] != null) ? result[1].toString() : "Sans titre";
-                String type = (result[2] != null) ? result[2].toString() : "";
+                String title = (itemData[1] != null) ? itemData[1].toString() : "Sans titre";
+                String type = (itemData[2] != null) ? itemData[2].toString() : "";
                 long loanCount = 0;
-                if (result.length > 3 && result[3] != null) {
-                    loanCount = ((Number) result[3]).longValue();
+                if (itemData.length > 3 && itemData[3] != null) {
+                    loanCount = ((Number) itemData[3]).longValue();
                 }
 
                 type = type.toUpperCase();
 
                 // Formatter selon le type
                 String typeLabel = "";
-                if ("BOOK".equals(type)) {
+                if ("book".equals(type)) {
                     typeLabel = " (Livre)";
-                } else if ("MAGAZINE".equals(type)) {
+                } else if ("magazine".equals(type)) {
                     typeLabel = " (Magazine)";
-                } else if ("BOARD_GAME".equals(type)) {
+                } else if ("board_game".equals(type)) {
                     typeLabel = " (Jeu de société)";
                 }
 
