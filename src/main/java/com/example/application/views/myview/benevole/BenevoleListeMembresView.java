@@ -10,6 +10,7 @@ import com.example.application.repository.RoleRepository;
 import com.example.application.repository.UserRepositoryV2;
 import com.example.application.service.implementation.UserRelationshipService;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.Key;
@@ -128,7 +129,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
             Span statusBadge = new Span(user.getStatus());
             statusBadge.getElement().getThemeList().add("badge");
 
-            if ("active".equals(user.getStatus())) {
+            if (StatusUtils.UserStatus.ACTIVE.equals(user.getStatus())) {
                 statusBadge.getElement().getThemeList().add("success");
                 statusBadge.setText("Actif");
             } else {
@@ -187,14 +188,14 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
         if (searchTerm == null || searchTerm.trim().isEmpty()) {
             // Get all members
             members = userService.findAll().stream()
-                    .filter(user -> user.getRole() != null && "Membre".equals(user.getRole().getName()))
+                    .filter(user -> user.getRole() != null && StatusUtils.RoleName.MEMBRE.equals(user.getRole().getName()))
                     .collect(Collectors.toList());
         } else {
             // Get filtered members
             searchTerm = searchTerm.toLowerCase();
             String finalSearchTerm = searchTerm;
             members = userService.findAll().stream()
-                    .filter(user -> user.getRole() != null && "Membre".equals(user.getRole().getName()) &&
+                    .filter(user -> user.getRole() != null && StatusUtils.RoleName.MEMBRE.equals(user.getRole().getName()) &&
                             (user.getUsername().toLowerCase().contains(finalSearchTerm) ||
                                     (user.getFirstName() != null
                                             && user.getFirstName().toLowerCase().contains(finalSearchTerm))
@@ -255,7 +256,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
 
         // Status toggle
         Checkbox activeCheckbox = new Checkbox("Compte actif");
-        activeCheckbox.setValue("active".equals(member.getStatus()));
+        activeCheckbox.setValue(StatusUtils.UserStatus.ACTIVE.equals(member.getStatus()));
 
         // Child status
         Checkbox childCheckbox = new Checkbox("Compte enfant");
@@ -284,7 +285,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
         // Get all adult members for parent selection
         List<UserDto> adultMembers = userService.findAll().stream()
                 .filter(user -> user.getRole() != null &&
-                        "Membre".equals(user.getRole().getName()) &&
+                        StatusUtils.RoleName.MEMBRE.equals(user.getRole().getName()) &&
                         (user.getIsChild() == null || !user.getIsChild()) &&
                         !user.getId().equals(memberId)) // Can't be parent of self
                 .collect(Collectors.toList());
@@ -409,7 +410,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
             member.setEmail(emailField.getValue());
             member.setPhoneNumber(phoneField.getValue());
             member.setCellNumber(cellField.getValue());
-            member.setStatus(activeCheckbox.getValue() ? "active" : "inactive");
+            member.setStatus(activeCheckbox.getValue() ? StatusUtils.UserStatus.ACTIVE : StatusUtils.UserStatus.SUSPENDED);
             member.setIsChild(childCheckbox.getValue());
 
             // Update date of birth if changed
@@ -530,7 +531,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
         // Get all adult members for parent selection
         List<UserDto> adultMembers = userService.findAll().stream()
                 .filter(user -> user.getRole() != null &&
-                        "Membre".equals(user.getRole().getName()) &&
+                        StatusUtils.RoleName.MEMBRE.equals(user.getRole().getName()) &&
                         (user.getIsChild() == null || !user.getIsChild()))
                 .collect(Collectors.toList());
 
@@ -601,7 +602,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
             newMember.setPhoneNumber(phoneField.getValue());
             newMember.setCellNumber(cellField.getValue());
             newMember.setPassword(passwordField.getValue()); // In real app, this should be hashed
-            newMember.setStatus("active");
+            newMember.setStatus(StatusUtils.UserStatus.ACTIVE);
             newMember.setIsChild(childCheckbox.getValue());
 
             // Convert LocalDate to Instant for dateOfBirth
@@ -614,7 +615,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
 
             // Set role to MEMBRE
             Role membreRole = roleRepository.findAll().stream()
-                    .filter(role -> "Membre".equals(role.getName()))
+                    .filter(role -> StatusUtils.RoleName.MEMBRE.equals(role.getName()))
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("Role 'Membre' not found"));
 

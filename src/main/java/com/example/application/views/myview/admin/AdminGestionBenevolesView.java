@@ -5,6 +5,7 @@ import com.example.application.entity.DTO.UserDto;
 import com.example.application.entity.Role;
 import com.example.application.repository.RoleRepository;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -126,7 +127,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
             Span statusBadge = new Span(user.getStatus());
             statusBadge.getElement().getThemeList().add("badge");
 
-            if ("active".equals(user.getStatus())) {
+            if (StatusUtils.UserStatus.ACTIVE.equals(user.getStatus())) {
                 statusBadge.getElement().getThemeList().add("success");
                 statusBadge.setText("Actif");
             } else {
@@ -144,7 +145,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
             editButton.addClickListener(e -> openBenevoleDetails(user));
 
             Button toggleStatusButton = new Button();
-            if ("active".equals(user.getStatus())) {
+            if (StatusUtils.UserStatus.ACTIVE.equals(user.getStatus())) {
                 toggleStatusButton.setText("Désactiver");
                 toggleStatusButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
             } else {
@@ -224,7 +225,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
     private void updateBenevolesList(String searchTerm) {
         // Get all users with role "BÉNÉVOLE"
         allBenevoles = userService.findAll().stream()
-                .filter(user -> user.getRole() != null && "Bénévole".equals(user.getRole().getName()))
+                .filter(user -> user.getRole() != null && StatusUtils.RoleName.BENEVOLE.equals(user.getRole().getName()))
                 .collect(Collectors.toList());
 
         // Filter by search term if provided
@@ -328,7 +329,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
 
         // Status toggle
         Checkbox activeCheckbox = new Checkbox("Compte actif");
-        activeCheckbox.setValue("active".equals(benevole.getStatus()));
+        activeCheckbox.setValue(StatusUtils.UserStatus.ACTIVE.equals(benevole.getStatus()));
 
         // Date of birth
         DatePicker dateOfBirthPicker = new DatePicker("Date de naissance");
@@ -357,7 +358,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
             benevole.setEmail(emailField.getValue());
             benevole.setPhoneNumber(phoneField.getValue());
             benevole.setCellNumber(cellField.getValue());
-            benevole.setStatus(activeCheckbox.getValue() ? "active" : "inactive");
+            benevole.setStatus(activeCheckbox.getValue() ? StatusUtils.UserStatus.ACTIVE : StatusUtils.UserStatus.SUSPENDED);
 
             // Update date of birth if changed
             if (dateOfBirthPicker.getValue() != null) {
@@ -459,7 +460,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
             newBenevole.setPhoneNumber(phoneField.getValue());
             newBenevole.setCellNumber(cellField.getValue());
             newBenevole.setPassword(passwordField.getValue()); // In real app, this should be hashed
-            newBenevole.setStatus("active");
+            newBenevole.setStatus(StatusUtils.UserStatus.ACTIVE);
             newBenevole.setIsChild(false);
 
             // Convert LocalDate to Instant for dateOfBirth
@@ -472,7 +473,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
 
             // Set role to BÉNÉVOLE
             Role benevoleRole = roleRepository.findAll().stream()
-                    .filter(role -> "Bénévole".equals(role.getName()))
+                    .filter(role -> StatusUtils.RoleName.BENEVOLE.equals(role.getName()))
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("Role 'Bénévole' not found"));
 
@@ -509,8 +510,8 @@ public class AdminGestionBenevolesView extends VerticalLayout {
     }
 
     private void toggleBenevoleStatus(UserDto benevole) {
-        String newStatus = "active".equals(benevole.getStatus()) ? "inactive" : "active";
-        String actionText = "active".equals(newStatus) ? "activer" : "désactiver";
+        String newStatus = StatusUtils.UserStatus.ACTIVE.equals(benevole.getStatus()) ? StatusUtils.UserStatus.SUSPENDED : StatusUtils.UserStatus.ACTIVE;
+        String actionText = StatusUtils.UserStatus.ACTIVE.equals(newStatus) ? "activer" : "désactiver";
 
         Dialog confirmDialog = new Dialog();
         confirmDialog.setWidth("400px");

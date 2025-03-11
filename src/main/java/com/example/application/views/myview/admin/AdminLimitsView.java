@@ -8,6 +8,7 @@ import com.example.application.entity.User;
 import com.example.application.service.implementation.LoanSettingServiceV2;
 import com.example.application.service.implementation.SpecialLimitService;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -198,7 +199,7 @@ public class AdminLimitsView extends VerticalLayout {
 
             Optional<SpecialLimit> specialLimit = specialLimitService.findFirstByUserOrderByCreatedAtDesc(userEntity);
 
-            if (specialLimit.isPresent() && "active".equals(specialLimit.get().getStatus())) {
+            if (specialLimit.isPresent() && StatusUtils.SpecialLimit.ACTIVE.equals(specialLimit.get().getStatus())) {
                 Span badge = new Span("Limites spéciales");
                 badge.getElement().getThemeList().add("badge");
                 badge.getElement().getThemeList().add("success");
@@ -217,7 +218,7 @@ public class AdminLimitsView extends VerticalLayout {
             userEntity.setId(user.getId());
             Optional<SpecialLimit> specialLimit = specialLimitService.findFirstByUserOrderByCreatedAtDesc(userEntity);
 
-            if (specialLimit.isPresent() && "active".equals(specialLimit.get().getStatus())) {
+            if (specialLimit.isPresent() && StatusUtils.SpecialLimit.ACTIVE.equals(specialLimit.get().getStatus())) {
                 return specialLimit.get().getMaxLoans();
             } else {
                 boolean isChild = user.getIsChild() != null && user.getIsChild();
@@ -234,7 +235,7 @@ public class AdminLimitsView extends VerticalLayout {
             userEntity.setId(user.getId());
             Optional<SpecialLimit> specialLimit = specialLimitService.findFirstByUserOrderByCreatedAtDesc(userEntity);
 
-            if (specialLimit.isPresent() && "active".equals(specialLimit.get().getStatus())) {
+            if (specialLimit.isPresent() && StatusUtils.SpecialLimit.ACTIVE.equals(specialLimit.get().getStatus())) {
                 return specialLimit.get().getMaxReservations();
             } else {
                 boolean isChild = user.getIsChild() != null && user.getIsChild();
@@ -356,13 +357,13 @@ public class AdminLimitsView extends VerticalLayout {
         if (searchTerm == null || searchTerm.isEmpty()) {
             // Get all members
             members = userService.findAll().stream()
-                    .filter(user -> user.getRole() != null && "Membre".equals(user.getRole().getName()))
+                    .filter(user -> user.getRole() != null && StatusUtils.RoleName.MEMBRE.equals(user.getRole().getName()))
                     .collect(Collectors.toList());
         } else {
             // Filter members by search term
             String finalSearchTerm = searchTerm.toLowerCase();
             members = userService.findAll().stream()
-                    .filter(user -> user.getRole() != null && "Membre".equals(user.getRole().getName()))
+                    .filter(user -> user.getRole() != null && StatusUtils.RoleName.MEMBRE.equals(user.getRole().getName()))
                     .filter(user -> (user.getUsername() != null
                             && user.getUsername().toLowerCase().contains(finalSearchTerm)) ||
                             (user.getFirstName() != null && user.getFirstName().toLowerCase().contains(finalSearchTerm))
@@ -390,7 +391,7 @@ public class AdminLimitsView extends VerticalLayout {
         Optional<SpecialLimit> currentSpecialLimit = specialLimitService
                 .findFirstByUserOrderByCreatedAtDesc(userEntity);
         boolean hasSpecialLimits = currentSpecialLimit.isPresent()
-                && "active".equals(currentSpecialLimit.get().getStatus());
+                && StatusUtils.SpecialLimit.ACTIVE.equals(currentSpecialLimit.get().getStatus());
 
         // Toggle for special limits
         Checkbox useSpecialLimitsCheckbox = new Checkbox("Utiliser des limites spéciales");
@@ -488,7 +489,7 @@ public class AdminLimitsView extends VerticalLayout {
             specialLimit.setUser(user);
             specialLimit.setMaxLoans(maxLoans);
             specialLimit.setMaxReservations(maxReservations);
-            specialLimit.setStatus("active");
+            specialLimit.setStatus(StatusUtils.SpecialLimit.ACTIVE);
             specialLimit.setCreatedAt(Instant.now());
             specialLimit.setUpdatedAt(Instant.now());
 
@@ -515,7 +516,7 @@ public class AdminLimitsView extends VerticalLayout {
                 specialLimit.setUser(user);
                 specialLimit.setMaxLoans(currentSpecialLimit.get().getMaxLoans());
                 specialLimit.setMaxReservations(currentSpecialLimit.get().getMaxReservations());
-                specialLimit.setStatus("inactive");
+                specialLimit.setStatus(StatusUtils.SpecialLimit.INACTIVE);
                 specialLimit.setCreatedAt(currentSpecialLimit.get().getCreatedAt());
                 specialLimit.setUpdatedAt(Instant.now());
 

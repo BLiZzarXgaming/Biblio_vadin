@@ -6,6 +6,7 @@ import com.example.application.entity.Role;
 import com.example.application.repository.RoleRepository;
 import com.example.application.security.Roles;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -113,7 +114,7 @@ public class AdminManagementView extends VerticalLayout {
             Span statusBadge = new Span(user.getStatus());
             statusBadge.getElement().getThemeList().add("badge");
 
-            if ("active".equals(user.getStatus())) {
+            if (StatusUtils.UserStatus.ACTIVE.equals(user.getStatus())) {
                 statusBadge.getElement().getThemeList().add("success");
                 statusBadge.setText("Actif");
             } else {
@@ -163,14 +164,14 @@ public class AdminManagementView extends VerticalLayout {
         if (searchTerm == null || searchTerm.trim().isEmpty()) {
             // Get all administrators
             admins = userService.findAll().stream()
-                    .filter(user -> user.getRole() != null && "Administrateur".equals(user.getRole().getName()))
+                    .filter(user -> user.getRole() != null && StatusUtils.RoleName.ADMIN.equals(user.getRole().getName()))
                     .collect(Collectors.toList());
         } else {
             // Get filtered administrators
             searchTerm = searchTerm.toLowerCase();
             String finalSearchTerm = searchTerm;
             admins = userService.findAll().stream()
-                    .filter(user -> user.getRole() != null && "Administrateur".equals(user.getRole().getName()) &&
+                    .filter(user -> user.getRole() != null && StatusUtils.RoleName.ADMIN.equals(user.getRole().getName()) &&
                             (user.getUsername().toLowerCase().contains(finalSearchTerm) ||
                                     (user.getFirstName() != null
                                             && user.getFirstName().toLowerCase().contains(finalSearchTerm))
@@ -239,7 +240,7 @@ public class AdminManagementView extends VerticalLayout {
 
         // Status toggle
         Checkbox activeCheckbox = new Checkbox("Compte actif");
-        activeCheckbox.setValue("active".equals(admin.getStatus()));
+        activeCheckbox.setValue(StatusUtils.UserStatus.ACTIVE.equals(admin.getStatus()));
 
         // Date of birth
         DatePicker dateOfBirthPicker = new DatePicker("Date de naissance");
@@ -267,7 +268,7 @@ public class AdminManagementView extends VerticalLayout {
             admin.setEmail(emailField.getValue());
             admin.setPhoneNumber(phoneField.getValue());
             admin.setCellNumber(cellField.getValue());
-            admin.setStatus(activeCheckbox.getValue() ? "active" : "inactive");
+            admin.setStatus(activeCheckbox.getValue() ? StatusUtils.UserStatus.ACTIVE : StatusUtils.UserStatus.SUSPENDED);
 
             // Update date of birth if changed
             if (dateOfBirthPicker.getValue() != null) {
@@ -373,7 +374,7 @@ public class AdminManagementView extends VerticalLayout {
             newAdmin.setPhoneNumber(phoneField.getValue());
             newAdmin.setCellNumber(cellField.getValue());
             newAdmin.setPassword(passwordField.getValue()); // In real app, this should be hashed
-            newAdmin.setStatus("active");
+            newAdmin.setStatus(StatusUtils.UserStatus.ACTIVE);
             newAdmin.setIsChild(false);
 
             // Convert LocalDate to Instant for dateOfBirth
@@ -398,7 +399,7 @@ public class AdminManagementView extends VerticalLayout {
 
             // Set role to Administrateur
             Role adminRole = roleRepository.findAll().stream()
-                    .filter(role -> "Administrateur".equals(role.getName()))
+                    .filter(role -> StatusUtils.RoleName.ADMIN.equals(role.getName()))
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("Role 'Administrateur' not found"));
 

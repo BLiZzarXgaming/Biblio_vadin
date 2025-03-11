@@ -4,6 +4,7 @@ import com.example.application.entity.DTO.LoanDto;
 import com.example.application.entity.DTO.UserDto;
 import com.example.application.service.implementation.LoanServiceV2;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -204,13 +205,7 @@ public class BenevoleRetardsView extends VerticalLayout {
 
         // Type de document
         overdueLoansGrid.addColumn(loan -> {
-            String type = loan.getCopy().getItem().getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(loan.getCopy().getItem().getType());
         }).setHeader("Type").setWidth("120px").setFlexGrow(0);
 
         // Date d'emprunt
@@ -261,7 +256,7 @@ public class BenevoleRetardsView extends VerticalLayout {
     private List<LoanDto> getOverdueLoansForMember(Long memberId) {
         // Récupérer tous les emprunts du membre avec le statut "borrowed"
         List<LoanDto> memberLoans = loanService.findByMember(memberId).stream()
-                .filter(loan -> "borrowed".equals(loan.getStatus()))
+                .filter(loan -> StatusUtils.LoanStatus.BORROWED.equals(loan.getStatus()))
                 .collect(Collectors.toList());
 
         // Filtrer pour ne garder que les emprunts en retard (date de retour < date du
@@ -274,7 +269,7 @@ public class BenevoleRetardsView extends VerticalLayout {
 
     private void updateMembersList(String searchTerm) {
         // 1. Récupérer tous les emprunts avec le statut "borrowed"
-        List<LoanDto> allBorrowedLoans = loanService.findByStatus("borrowed");
+        List<LoanDto> allBorrowedLoans = loanService.findByStatus(StatusUtils.LoanStatus.BORROWED);
 
         // 2. Filtrer pour ne garder que les emprunts en retard
         LocalDate today = LocalDate.now();

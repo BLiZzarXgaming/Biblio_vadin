@@ -1,7 +1,5 @@
 package com.example.application.views.myview.membre;
 
-//import com.example.application.config.SecurityService;
-//import com.example.application.config.SecurityService;
 import com.example.application.entity.DTO.UserDto;
 import com.example.application.identification_user.MyUserPrincipal;
 import com.example.application.service.implementation.UserServiceV2;

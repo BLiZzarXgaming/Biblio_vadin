@@ -11,7 +11,6 @@ import jakarta.annotation.security.RolesAllowed;
 
 @PageTitle("Accueil")
 @Route(value = "admin/home", layout = MainLayout.class)
-//@RouteAlias(value = "", layout = MainLayout.class)
 @RolesAllowed("ROLE_ADMINISTRATEUR")
 public class AdminHomeView extends Composite<VerticalLayout> {
 

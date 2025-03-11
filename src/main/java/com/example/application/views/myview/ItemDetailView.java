@@ -1,13 +1,9 @@
 package com.example.application.views.myview;
 
-import com.example.application.entity.BoardGame;
-import com.example.application.entity.Book;
 import com.example.application.entity.DTO.BoardGameDto;
 import com.example.application.entity.DTO.BookDto;
 import com.example.application.entity.DTO.ItemDto;
 import com.example.application.entity.DTO.MagazineDto;
-import com.example.application.entity.Item;
-import com.example.application.entity.Magazine;
 import com.example.application.service.implementation.BoardGameServiceV2;
 import com.example.application.service.implementation.BookServiceV2;
 import com.example.application.service.implementation.ItemServiceV2;

@@ -3,6 +3,7 @@ package com.example.application.views.myview.benevole;
 import com.example.application.entity.DTO.ReservationDto;
 import com.example.application.entity.DTO.UserDto;
 import com.example.application.service.implementation.ReservationServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -105,7 +106,7 @@ public class BenevoleListeReservationView extends VerticalLayout {
             Span statusBadge = new Span();
             statusBadge.getElement().getThemeList().add("badge");
 
-            if ("active".equals(user.getStatus())) {
+            if (StatusUtils.UserStatus.ACTIVE.equals(user.getStatus())) {
                 statusBadge.getElement().getThemeList().add("success");
                 statusBadge.setText("Actif");
             } else {
@@ -195,13 +196,7 @@ public class BenevoleListeReservationView extends VerticalLayout {
 
         // Type de document
         reservationsGrid.addColumn(reservation -> {
-            String type = reservation.getCopy().getItem().getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(reservation.getCopy().getItem().getType());
         }).setHeader("Type").setWidth("120px").setFlexGrow(0);
 
         // Date de réservation
@@ -217,7 +212,7 @@ public class BenevoleListeReservationView extends VerticalLayout {
             Span statusBadge = new Span();
             statusBadge.getElement().getThemeList().add("badge");
 
-            if ("ready".equals(reservation.getStatus())) {
+            if (StatusUtils.ReservationStatus.READY.equals(reservation.getStatus())) {
                 statusBadge.getElement().getThemeList().add("success");
                 statusBadge.setText("Prêt");
             } else {
@@ -259,11 +254,11 @@ public class BenevoleListeReservationView extends VerticalLayout {
 
         if (searchTerm == null || searchTerm.trim().isEmpty()) {
             // Obtenir tous les membres qui ont des réservations prêtes à être préparées
-            members = reservationService.findDistinctMembersByStatus("reserved");
+            members = reservationService.findDistinctMembersByStatus(StatusUtils.ReservationStatus.PENDING);
         } else {
             // Filtrer les membres par terme de recherche
             String finalSearchTerm = searchTerm.toLowerCase();
-            members = reservationService.findDistinctMembersByStatus("reserved").stream()
+            members = reservationService.findDistinctMembersByStatus(StatusUtils.ReservationStatus.PENDING).stream()
                     .filter(user -> user.getUsername().toLowerCase().contains(finalSearchTerm) ||
                             (user.getFirstName() != null && user.getFirstName().toLowerCase().contains(finalSearchTerm))
                             ||

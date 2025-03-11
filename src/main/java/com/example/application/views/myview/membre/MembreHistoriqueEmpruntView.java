@@ -4,6 +4,7 @@ import com.example.application.entity.DTO.LoanDto;
 import com.example.application.entity.DTO.UserDto;
 import com.example.application.service.implementation.LoanServiceV2;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -107,7 +108,7 @@ public class MembreHistoriqueEmpruntView extends VerticalLayout {
         endDatePicker.addValueChangeListener(e -> updateGridItems());
 
         statusFilter = new ComboBox<>("Statut");
-        statusFilter.setItems("Tous", "Emprunté", "Retourné", "En retard", "Annulé");
+        statusFilter.setItems("Tous", StatusUtils.LoanStatus.toFrench(StatusUtils.LoanStatus.BORROWED), StatusUtils.LoanStatus.toFrench(StatusUtils.LoanStatus.RETURNED) , StatusUtils.LoanStatus.toFrench(StatusUtils.LoanStatus.OVERDUE));
         statusFilter.setValue("Tous");
         statusFilter.addValueChangeListener(e -> updateGridItems());
 
@@ -131,18 +132,8 @@ public class MembreHistoriqueEmpruntView extends VerticalLayout {
                 .setFlexGrow(1);
 
         loansGrid.addColumn(loan -> {
-            String type = loan.getCopy().getItem().getType();
-            switch (type) {
-                case "book":
-                    return "Livre";
-                case "magazine":
-                    return "Revue";
-                case "board_game":
-                    return "Jeu";
-                default:
-                    return type;
-            }
-        }).setHeader("Type").setWidth("120px");
+            return StatusUtils.DocTypes.toFrench(loan.getCopy().getItem().getType());
+            }).setHeader("Type").setWidth("120px");
 
         loansGrid.addColumn(loan -> loan.getLoanDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 .setHeader("Date d'emprunt")
@@ -155,22 +146,22 @@ public class MembreHistoriqueEmpruntView extends VerticalLayout {
                 .setWidth("180px");
 
         loansGrid.addComponentColumn(loan -> {
-            Span status = new Span(getStatusText(loan.getStatus()));
+            Span status = new Span(StatusUtils.LoanStatus.toFrench(loan.getStatus()));
             status.getElement().getThemeList().add("badge");
 
             switch (loan.getStatus()) {
-                case "borrowed":
+                case StatusUtils.LoanStatus.BORROWED:
                     if (loan.getReturnDueDate().isBefore(LocalDate.now())) {
-                        status.setText("En retard");
+                        status.setText(StatusUtils.DocTypes.toFrench(loan.getStatus()));
                         status.getElement().getThemeList().add("error");
                     } else {
                         status.getElement().getThemeList().add("success");
                     }
                     break;
-                case "returned":
+                case StatusUtils.LoanStatus.RETURNED:
                     status.getElement().getThemeList().add("contrast");
                     break;
-                case "canceled":
+                case StatusUtils.LoanStatus.CANCELED:
                     status.getElement().getThemeList().add("error");
                     break;
                 default:
@@ -258,30 +249,17 @@ public class MembreHistoriqueEmpruntView extends VerticalLayout {
 
     private boolean matchesStatusFilter(LoanDto loan, String filter) {
         switch (filter) {
-            case "Emprunté":
-                return "borrowed".equals(loan.getStatus());
-            case "Retourné":
-                return "returned".equals(loan.getStatus());
-            case "En retard":
-                return "borrowed".equals(loan.getStatus()) &&
+            case StatusUtils.LoanStatus.EMPRUNTE:
+                return StatusUtils.LoanStatus.BORROWED.equals(loan.getStatus());
+            case StatusUtils.LoanStatus.RETOURNE:
+                return StatusUtils.LoanStatus.RETURNED.equals(loan.getStatus());
+            case StatusUtils.LoanStatus.RETARD:
+                return StatusUtils.LoanStatus.OVERDUE.equals(loan.getStatus()) &&
                         loan.getReturnDueDate().isBefore(LocalDate.now());
-            case "Annulé":
-                return "canceled".equals(loan.getStatus());
+            case StatusUtils.LoanStatus.ANNULE:
+                return StatusUtils.LoanStatus.CANCELED.equals(loan.getStatus());
             default:
                 return true;
-        }
-    }
-
-    private String getStatusText(String status) {
-        switch (status) {
-            case "borrowed":
-                return "Emprunté";
-            case "returned":
-                return "Retourné";
-            case "canceled":
-                return "Annulé";
-            default:
-                return status;
         }
     }
 

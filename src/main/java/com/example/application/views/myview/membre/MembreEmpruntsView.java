@@ -6,6 +6,7 @@ import com.example.application.entity.User;
 import com.example.application.service.implementation.LoanServiceV2;
 import com.example.application.service.implementation.UserRelationshipService;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.H2;
@@ -92,13 +93,7 @@ public class MembreEmpruntsView extends VerticalLayout {
                 .setFlexGrow(1);
 
         loansGrid.addColumn(loan -> {
-            String type = loan.getCopy().getItem().getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(loan.getCopy().getItem().getType());
         }).setHeader("Type").setAutoWidth(true);
 
         loansGrid.addColumn(loan -> loan.getLoanDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
@@ -165,7 +160,7 @@ public class MembreEmpruntsView extends VerticalLayout {
         // Load user's own loans
         List<LoanDto> userLoans = loanService.findByMember(currentUser.getId())
                 .stream()
-                .filter(loan -> "borrowed".equals(loan.getStatus()))
+                .filter(loan -> StatusUtils.LoanStatus.BORROWED.equals(loan.getStatus()))
                 .collect(Collectors.toList());
 
         allLoans.addAll(userLoans);
@@ -184,7 +179,7 @@ public class MembreEmpruntsView extends VerticalLayout {
                 // Get child's loans
                 List<LoanDto> childLoans = loanService.findByMember(child.getId())
                         .stream()
-                        .filter(loan -> "borrowed".equals(loan.getStatus()))
+                        .filter(loan -> StatusUtils.LoanStatus.BORROWED.equals(loan.getStatus()))
                         .collect(Collectors.toList());
 
                 allLoans.addAll(childLoans);

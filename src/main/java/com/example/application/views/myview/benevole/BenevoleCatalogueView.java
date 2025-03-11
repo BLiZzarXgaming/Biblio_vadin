@@ -3,6 +3,7 @@ package com.example.application.views.myview.benevole;
 import com.example.application.entity.DTO.*;
 import com.example.application.objectcustom.MoisOption;
 import com.example.application.service.implementation.*;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -116,7 +117,10 @@ public class BenevoleCatalogueView extends VerticalLayout {
 
         // Type de document
         typeFilter = new ComboBox<>("Type");
-        typeFilter.setItems("Tous", "Livre", "Revue", "Jeu");
+        typeFilter.setItems("Tous",
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.BOOK),
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.MAGAZINE),
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.BOARD_GAME));
         typeFilter.setValue("Tous");
         typeFilter.addValueChangeListener(e -> updateFiltersByType(e.getValue()));
 
@@ -184,9 +188,9 @@ public class BenevoleCatalogueView extends VerticalLayout {
     }
 
     private void updateFiltersByType(String type) {
-        boolean isBook = "Livre".equals(type);
-        boolean isMagazine = "Revue".equals(type);
-        boolean isGame = "Jeu".equals(type);
+        boolean isBook = StatusUtils.DocTypes.LIVRE.equals(type);
+        boolean isMagazine = StatusUtils.DocTypes.REVUE.equals(type);
+        boolean isGame = StatusUtils.DocTypes.JEU.equals(type);
 
         // Cacher tous les filtres spécifiques
         authorFilter.setVisible(false);
@@ -212,13 +216,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
         resultsGrid.addColumn(ItemDto::getTitle).setHeader("Titre").setAutoWidth(true).setFlexGrow(1);
 
         resultsGrid.addColumn(item -> {
-            String type = item.getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(item.getType());
         }).setHeader("Type").setAutoWidth(true);
 
         resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setAutoWidth(true);
@@ -342,18 +340,18 @@ public class BenevoleCatalogueView extends VerticalLayout {
         }
 
         // Critères spécifiques selon le type
-        if ("Livre".equals(selectedType)) {
+        if (StatusUtils.DocTypes.LIVRE.equals(selectedType)) {
             if (!authorFilter.getValue().isEmpty()) {
                 searchCriteria.put("author", authorFilter.getValue());
             }
             if (!isbnFilter.getValue().isEmpty()) {
                 searchCriteria.put("isbn", isbnFilter.getValue());
             }
-        } else if ("Revue".equals(selectedType)) {
+        } else if (StatusUtils.DocTypes.REVUE.equals(selectedType)) {
             if (!isniFilter.getValue().isEmpty()) {
                 searchCriteria.put("isni", isniFilter.getValue());
             }
-        } else if ("Jeu".equals(selectedType)) {
+        } else if (StatusUtils.DocTypes.JEU.equals(selectedType)) {
             if (!gtinFilter.getValue().isEmpty()) {
                 searchCriteria.put("gtin", gtinFilter.getValue());
             }
@@ -382,6 +380,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 pageSize);
     }
 
+    //TODO : Implementer la methode pour de vrai
     private long countItemsWithFilters() {
         // Dans une implémentation réelle, cette méthode appellerait un service
         // qui compterait les items répondant aux critères sans les charger tous.
@@ -431,14 +430,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("600px", 2));
 
-        String itemType = switch (item.getType()) {
-            case "book" -> "Livre";
-            case "magazine" -> "Revue";
-            case "board_game" -> "Jeu";
-            default -> item.getType();
-        };
-
-        TextField typeField = createReadOnlyTextField("Type", itemType);
+        TextField typeField = createReadOnlyTextField("Type", StatusUtils.DocTypes.toFrench(item.getType()));
         TextField categoryField = createReadOnlyTextField("Catégorie", item.getCategory().getName());
         TextField publisherField = createReadOnlyTextField("Éditeur", item.getPublisher().getName());
         TextField valueField = createReadOnlyTextField("Valeur", item.getValue().toString() + " $");
@@ -458,7 +450,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("600px", 2));
 
-        if ("book".equals(item.getType())) {
+        if (StatusUtils.DocTypes.BOOK.equals(item.getType())) {
             Optional<BookDto> book = bookService.findById(item.getId());
             if (book.isPresent()) {
                 specificInfoLayout.add(createReadOnlyTextField("Auteur", book.get().getAuthor()));
@@ -466,7 +458,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 specificInfoLayout.add(createReadOnlyTextField("Date de publication",
                         book.get().getPublicationDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
             }
-        } else if ("magazine".equals(item.getType())) {
+        } else if (StatusUtils.DocTypes.MAGAZINE.equals(item.getType())) {
             Optional<MagazineDto> magazine = magazineService.findById(item.getId());
             if (magazine.isPresent()) {
                 specificInfoLayout.add(createReadOnlyTextField("ISNI", magazine.get().getIsni()));
@@ -475,7 +467,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 specificInfoLayout.add(createReadOnlyTextField("Date de publication",
                         magazine.get().getPublicationDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
             }
-        } else if ("board_game".equals(item.getType())) {
+        } else if (StatusUtils.DocTypes.BOARD_GAME.equals(item.getType())) {
             Optional<BoardGameDto> boardGame = boardGameService.findById(item.getId());
             if (boardGame.isPresent()) {
                 specificInfoLayout.add(createReadOnlyTextField("Nombre de pièces",
@@ -587,7 +579,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
 
         H3 specificTitle = new H3("Informations spécifiques");
 
-        if ("book".equals(item.getType())) {
+        if (StatusUtils.DocTypes.BOOK.equals(item.getType())) {
             Optional<BookDto> book = bookService.findById(item.getId());
             if (book.isPresent()) {
                 authorField = new TextField("Auteur");
@@ -605,7 +597,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
 
                 specificForm.add(authorField, isbnField, publicationDateField);
             }
-        } else if ("magazine".equals(item.getType())) {
+        } else if (StatusUtils.DocTypes.MAGAZINE.equals(item.getType())) {
             Optional<MagazineDto> magazine = magazineService.findById(item.getId());
             if (magazine.isPresent()) {
                 isniField = new TextField("ISNI");
@@ -631,7 +623,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
 
                 specificForm.add(isniField, monthField, yearField, publicationDateField);
             }
-        } else if ("board_game".equals(item.getType())) {
+        } else if (StatusUtils.DocTypes.BOARD_GAME.equals(item.getType())) {
             Optional<BoardGameDto> boardGame = boardGameService.findById(item.getId());
             if (boardGame.isPresent()) {
                 numberOfPiecesField = new IntegerField("Nombre de pièces");
@@ -697,7 +689,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 item.setLink(linkField.getValue());
 
                 // Mettre à jour l'entité spécifique
-                if ("book".equals(item.getType())) {
+                if (StatusUtils.DocTypes.BOOK.equals(item.getType())) {
                     if (finalAuthorField.isEmpty() || finalPublicationDateField.isEmpty()) {
                         showNotification("Veuillez remplir tous les champs obligatoires", "error");
                         return;
@@ -709,7 +701,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                     book.setItem(item);
                     bookService.save(book);
 
-                } else if ("magazine".equals(item.getType())) {
+                } else if (StatusUtils.DocTypes.MAGAZINE.equals(item.getType())) {
                     if (finalPublicationDateField.isEmpty()) {
                         showNotification("Veuillez remplir tous les champs obligatoires", "error");
                         return;
@@ -720,7 +712,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                     magazine.setItem(item);
                     magazineService.save(magazine);
 
-                } else if ("board_game".equals(item.getType())) {
+                } else if (StatusUtils.DocTypes.BOARD_GAME.equals(item.getType())) {
                     if (finalNumberOfPiecesField.isEmpty() || finalRecommendedAgeField.isEmpty()
                             || finalGameRulesArea.isEmpty()) {
                         showNotification("Veuillez remplir tous les champs obligatoires", "error");
@@ -776,15 +768,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
         copiesGrid.addColumn(CopyDto::getId).setHeader("ID").setAutoWidth(true);
 
         copiesGrid.addColumn(copy -> {
-            String status = copy.getStatus();
-            return switch (status) {
-                case "available" -> "Disponible";
-                case "borrowed" -> "Emprunté";
-                case "reserved" -> "Réservé";
-                case "unavailable" -> "Indisponible";
-                case "deleted" -> "Supprimé";
-                default -> status;
-            };
+            return StatusUtils.ItemStatus.toFrench(copy.getStatus());
         }).setHeader("Statut").setAutoWidth(true);
 
         copiesGrid.addColumn(copy -> copy.getAcquisitionDate() != null
@@ -796,20 +780,20 @@ public class BenevoleCatalogueView extends VerticalLayout {
         copiesGrid.addColumn(new ComponentRenderer<>(copy -> {
             HorizontalLayout actionLayout = new HorizontalLayout();
 
-            if ("available".equals(copy.getStatus())) {
+            if (StatusUtils.ItemStatus.AVAILABLE.equals(copy.getStatus())) {
                 Button unavailableButton = new Button("Indisponible");
                 unavailableButton.addThemeVariants(ButtonVariant.LUMO_SMALL);
-                unavailableButton.addClickListener(e -> setItemStatus(copy, "unavailable", copiesGrid, item));
+                unavailableButton.addClickListener(e -> setItemStatus(copy, StatusUtils.ItemStatus.UNAVAILABLE, copiesGrid, item));
                 actionLayout.add(unavailableButton);
 
                 Button deleteButton = new Button("Supprimer");
                 deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
-                deleteButton.addClickListener(e -> setItemStatus(copy, "deleted", copiesGrid, item));
+                deleteButton.addClickListener(e -> setItemStatus(copy, StatusUtils.ItemStatus.DELETED, copiesGrid, item));
                 actionLayout.add(deleteButton);
-            } else if ("unavailable".equals(copy.getStatus()) || "deleted".equals(copy.getStatus())) {
+            } else if (StatusUtils.ItemStatus.UNAVAILABLE.equals(copy.getStatus()) || StatusUtils.ItemStatus.DELETED.equals(copy.getStatus())) {
                 Button availableButton = new Button("Rendre disponible");
                 availableButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_SUCCESS);
-                availableButton.addClickListener(e -> setItemStatus(copy, "available", copiesGrid, item));
+                availableButton.addClickListener(e -> setItemStatus(copy, StatusUtils.ItemStatus.AVAILABLE, copiesGrid, item));
                 actionLayout.add(availableButton);
             }
 
@@ -882,7 +866,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 newCopy.setItem(item);
                 newCopy.setAcquisitionDate(acquisitionDateField.getValue());
                 newCopy.setPrice(price);
-                newCopy.setStatus("available");
+                newCopy.setStatus(StatusUtils.ItemStatus.AVAILABLE);
 
                 copyService.save(newCopy);
 
@@ -913,7 +897,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
     private void setItemStatus(CopyDto copy, String newStatus, Grid<CopyDto> copiesGrid, ItemDto item) {
         try {
             // Vérifier si la copie peut changer de statut
-            if ("borrowed".equals(copy.getStatus()) || "reserved".equals(copy.getStatus())) {
+            if (StatusUtils.ItemStatus.BORROWED.equals(copy.getStatus()) || StatusUtils.ItemStatus.RESERVED.equals(copy.getStatus())) {
                 showNotification("Impossible de modifier le statut d'une copie empruntée ou réservée", "error");
                 return;
             }
@@ -923,12 +907,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
             copyService.save(copy);
 
             // Message de confirmation
-            String statusMessage = switch (newStatus) {
-                case "available" -> "disponible";
-                case "unavailable" -> "indisponible";
-                case "deleted" -> "supprimée";
-                default -> newStatus;
-            };
+            String statusMessage = StatusUtils.ItemStatus.toFrench(newStatus);
 
             showNotification("Copie marquée comme " + statusMessage, "success");
 
@@ -958,7 +937,7 @@ public class BenevoleCatalogueView extends VerticalLayout {
                 // Marquer toutes les copies comme supprimées
                 List<CopyDto> copies = copyService.findByItem(item.getId());
                 for (CopyDto copy : copies) {
-                    if (!"borrowed".equals(copy.getStatus()) && !"reserved".equals(copy.getStatus())) {
+                    if (!StatusUtils.ItemStatus.BORROWED.equals(copy.getStatus()) && !StatusUtils.ItemStatus.RESERVED.equals(copy.getStatus())) {
                         copy.setStatus("deleted");
                         copyService.save(copy);
                     }

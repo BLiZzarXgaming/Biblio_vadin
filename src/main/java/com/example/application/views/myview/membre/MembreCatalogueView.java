@@ -5,6 +5,7 @@ import com.example.application.entity.User;
 import com.example.application.entity.DTO.*;
 import com.example.application.objectcustom.MoisOption;
 import com.example.application.service.implementation.*;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -154,7 +155,7 @@ public class MembreCatalogueView extends VerticalLayout {
 
             // Get active reservations count
             List<ReservationDto> activeReservations = reservationService.findByMember(currentUser.getId()).stream()
-                    .filter(r -> "reserved".equals(r.getStatus()) || "ready".equals(r.getStatus()))
+                    .filter(r -> StatusUtils.ReservationStatus.PENDING.equals(r.getStatus()) || StatusUtils.ReservationStatus.READY.equals(r.getStatus()))
                     .collect(Collectors.toList());
             activeReservationCount = activeReservations.size();
         } else {
@@ -181,7 +182,7 @@ public class MembreCatalogueView extends VerticalLayout {
             user.setId(currentUser.getId());
 
             Optional<SpecialLimit> specialLimit = specialLimitService.findFirstByUserOrderByCreatedAtDesc(user);
-            if (specialLimit.isPresent() && "active".equals(specialLimit.get().getStatus())) {
+            if (specialLimit.isPresent() && StatusUtils.SpecialLimit.ACTIVE.equals(specialLimit.get().getStatus())) {
                 reservationLimit = specialLimit.get().getMaxReservations();
             }
         } catch (Exception e) {
@@ -197,7 +198,10 @@ public class MembreCatalogueView extends VerticalLayout {
 
         // Type selection dropdown
         typeComboBox = new ComboBox<>("Type de document");
-        typeComboBox.setItems("Tous", "Livre", "Revue", "Jeu");
+        typeComboBox.setItems("Tous",
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.BOOK),
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.MAGAZINE),
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.MAGAZINE));
         typeComboBox.setValue("Tous");
         typeComboBox.addValueChangeListener(e -> {
             selectedType = e.getValue();
@@ -281,13 +285,13 @@ public class MembreCatalogueView extends VerticalLayout {
         searchFieldsLayout.removeAll();
 
         switch (selectedType) {
-            case "Livre":
+            case StatusUtils.DocTypes.LIVRE:
                 createBookSearchFields();
                 break;
-            case "Revue":
+            case StatusUtils.DocTypes.REVUE:
                 createMagazineSearchFields();
                 break;
-            case "Jeu":
+            case StatusUtils.DocTypes.JEU:
                 createGameSearchFields();
                 break;
             default:
@@ -356,13 +360,7 @@ public class MembreCatalogueView extends VerticalLayout {
         // Configure columns
         resultsGrid.addColumn(ItemDto::getTitle).setHeader("Titre").setAutoWidth(true).setFlexGrow(1);
         resultsGrid.addColumn(item -> {
-            String type = item.getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(item.getType());
         }).setHeader("Type").setAutoWidth(true);
         resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setAutoWidth(true);
         resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur").setAutoWidth(true);
@@ -433,7 +431,7 @@ public class MembreCatalogueView extends VerticalLayout {
 
         // Get values from appropriate fields based on selected type
         switch (selectedType) {
-            case "Livre":
+            case StatusUtils.DocTypes.LIVRE:
                 searchCriteria.put("title", titleField.getValue());
                 searchCriteria.put("author", authorField.getValue());
                 searchCriteria.put("isbn", isbnField.getValue());
@@ -441,7 +439,7 @@ public class MembreCatalogueView extends VerticalLayout {
                 searchCriteria.put("category", categoryComboBox.getValue());
                 searchCriteria.put("publisher", publisherComboBox.getValue());
                 break;
-            case "Revue":
+            case StatusUtils.DocTypes.REVUE:
                 searchCriteria.put("title", titleField.getValue());
                 searchCriteria.put("isni", isniField.getValue());
                 searchCriteria.put("month",
@@ -451,7 +449,7 @@ public class MembreCatalogueView extends VerticalLayout {
                 searchCriteria.put("category", categoryComboBox.getValue());
                 searchCriteria.put("publisher", publisherComboBox.getValue());
                 break;
-            case "Jeu":
+            case StatusUtils.DocTypes.JEU:
                 searchCriteria.put("title", titleField.getValue());
                 searchCriteria.put("gtin", gtinField.getValue());
                 searchCriteria.put("numberOfPieces", numberOfPiecesField.getValue());
@@ -520,24 +518,8 @@ public class MembreCatalogueView extends VerticalLayout {
                     "<a href='" + item.getLink() + "' target='_blank'>" + item.getTitle() + "</a>");
         }
 
-        // Item type
-        String typeLabel = "";
-        switch (item.getType()) {
-            case "book":
-                typeLabel = "Livre";
-                break;
-            case "magazine":
-                typeLabel = "Revue";
-                break;
-            case "board_game":
-                typeLabel = "Jeu";
-                break;
-            default:
-                typeLabel = item.getType();
-        }
-
         Div typeDiv = new Div();
-        typeDiv.add(new Span("Type: " + typeLabel));
+        typeDiv.add(new Span("Type: " + StatusUtils.DocTypes.toFrench(item.getType())));
 
         // Category
         Div categoryDiv = new Div();
@@ -552,13 +534,13 @@ public class MembreCatalogueView extends VerticalLayout {
         specificDetailsLayout.setPadding(false);
         specificDetailsLayout.setSpacing(false);
 
-        if ("book".equals(item.getType())) {
+        if (StatusUtils.DocTypes.BOOK.equals(item.getType())) {
             // Book-specific details
             addBookDetails(specificDetailsLayout, item.getId());
-        } else if ("magazine".equals(item.getType())) {
+        } else if (StatusUtils.DocTypes.MAGAZINE.equals(item.getType())) {
             // Magazine-specific details
             addMagazineDetails(specificDetailsLayout, item.getId());
-        } else if ("board_game".equals(item.getType())) {
+        } else if (StatusUtils.DocTypes.BOARD_GAME.equals(item.getType())) {
             // Board game-specific details
             addBoardGameDetails(specificDetailsLayout, item.getId());
         }
@@ -593,7 +575,7 @@ public class MembreCatalogueView extends VerticalLayout {
                 // Check current reservations
                 List<ReservationDto> itemReservations = copies.stream()
                         .flatMap(copy -> reservationService.findByCopy(copy.getId()).stream())
-                        .filter(res -> "reserved".equals(res.getStatus()) || "ready".equals(res.getStatus()))
+                        .filter(res -> StatusUtils.ReservationStatus.PENDING.equals(res.getStatus()) || StatusUtils.ReservationStatus.READY.equals(res.getStatus()))
                         .collect(Collectors.toList());
 
                 if (!itemReservations.isEmpty()) {
@@ -623,7 +605,7 @@ public class MembreCatalogueView extends VerticalLayout {
                 boolean hasExistingReservation = copies.stream()
                         .flatMap(copy -> reservationService.findByCopy(copy.getId()).stream())
                         .anyMatch(res -> res.getMember().getId().equals(currentUser.getId()) &&
-                                ("reserved".equals(res.getStatus()) || "ready".equals(res.getStatus())));
+                                (StatusUtils.ReservationStatus.PENDING.equals(res.getStatus()) || StatusUtils.ReservationStatus.READY.equals(res.getStatus())));
 
                 if (hasExistingReservation) {
                     Paragraph alreadyReservedText = new Paragraph("Vous avez déjà réservé ce document");
@@ -632,7 +614,7 @@ public class MembreCatalogueView extends VerticalLayout {
                 } else {
                     // Find a copy for reservation (can be any copy, even if borrowed)
                     copyToReserve = copies.stream()
-                            .filter(copy -> !"deleted".equals(copy.getStatus()))
+                            .filter(copy -> !StatusUtils.ItemStatus.DELETED.equals(copy.getStatus()) || !StatusUtils.ItemStatus.UNAVAILABLE.equals(copy.getStatus()))
                             .findFirst()
                             .orElse(null);
 
@@ -655,7 +637,7 @@ public class MembreCatalogueView extends VerticalLayout {
                     newReservation.setCopy(finalCopyToReserve);
                     newReservation.setMember(currentUser);
                     newReservation.setReservationDate(LocalDate.now());
-                    newReservation.setStatus("reserved");
+                    newReservation.setStatus(StatusUtils.ReservationStatus.PENDING);
 
                     // Save reservation
                     reservationService.save(newReservation);

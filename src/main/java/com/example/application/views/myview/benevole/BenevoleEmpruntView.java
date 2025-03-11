@@ -8,6 +8,7 @@ import com.example.application.entity.SpecialLimit;
 import com.example.application.entity.User;
 import com.example.application.objectcustom.MoisOption;
 import com.example.application.service.implementation.*;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
@@ -200,13 +201,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         activeLoansGrid = new Grid<>();
         activeLoansGrid.addColumn(loan -> loan.getCopy().getItem().getTitle()).setHeader("Titre");
         activeLoansGrid.addColumn(loan -> {
-            String type = loan.getCopy().getItem().getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(loan.getCopy().getItem().getType());
         }).setHeader("Type");
         activeLoansGrid.addColumn(loan -> loan.getLoanDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 .setHeader("Date d'emprunt");
@@ -466,7 +461,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
     private void displayMemberInfo() {
         // Récupérer les emprunts actifs du membre
         List<LoanDto> activeLoans = loanService.findByMember(selectedMember.getId()).stream()
-                .filter(loan -> "borrowed".equals(loan.getStatus()))
+                .filter(loan -> StatusUtils.LoanStatus.BORROWED.equals(loan.getStatus()))
                 .toList();
 
         activeLoanCount = activeLoans.size();
@@ -490,7 +485,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
             user.setId(selectedMember.getId());
 
             Optional<SpecialLimit> specialLimit = specialLimitService.findFirstByUserOrderByCreatedAtDesc(user);
-            if (specialLimit.isPresent() && "active".equals(specialLimit.get().getStatus())) {
+            if (specialLimit.isPresent() && StatusUtils.SpecialLimit.ACTIVE.equals(specialLimit.get().getStatus())) {
                 memberLoanLimit = specialLimit.get().getMaxLoans();
             }
         } catch (Exception e) {
@@ -602,7 +597,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
 
         // Filtrer pour obtenir les copies disponibles
         List<CopyDto> availableCopies = copies.stream()
-                .filter(copy -> "available".equals(copy.getStatus()))
+                .filter(copy -> StatusUtils.ItemStatus.AVAILABLE.equals(copy.getStatus()))
                 .toList();
 
         if (availableCopies.isEmpty()) {
@@ -614,8 +609,8 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
             statusMessage.getStyle().set("color", "var(--lumo-warning-color)");
 
             // Ajouter un récapitulatif des statuts
-            long borrowedCount = copies.stream().filter(c -> "borrowed".equals(c.getStatus())).count();
-            long reservedCount = copies.stream().filter(c -> "reserved".equals(c.getStatus())).count();
+            long borrowedCount = copies.stream().filter(c -> StatusUtils.ItemStatus.BORROWED.equals(c.getStatus())).count();
+            long reservedCount = copies.stream().filter(c -> StatusUtils.ItemStatus.RESERVED.equals(c.getStatus())).count();
 
             StringBuilder details = new StringBuilder();
             if (borrowedCount > 0) {
@@ -674,12 +669,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         copyInfo.add(idField);
 
         // Ajout des autres informations
-        String typeLabel = switch (copy.getItem().getType()) {
-            case "book" -> "Livre";
-            case "magazine" -> "Revue";
-            case "board_game" -> "Jeu";
-            default -> copy.getItem().getType();
-        };
+        String typeLabel = StatusUtils.DocTypes.toFrench(copy.getItem().getType());
 
         TextField typeField = new TextField("Type");
         typeField.setValue(typeLabel);
@@ -690,7 +680,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         statusField.setReadOnly(true);
 
         // Coloration du champ statut selon la disponibilité
-        if ("available".equals(copy.getStatus())) {
+        if (StatusUtils.ItemStatus.AVAILABLE.equals(copy.getStatus())) {
             statusField.getStyle().set("color", "green");
         } else {
             statusField.getStyle().set("color", "red");
@@ -717,7 +707,7 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         resultLayout.add(copyDetailsLayout);
 
         // Vérifier si la copie est disponible
-        if (!"available".equals(copy.getStatus())) {
+        if (!StatusUtils.ItemStatus.AVAILABLE.equals(copy.getStatus())) {
             Span unavailableMessage = new Span(
                     "Cet exemplaire n'est pas disponible actuellement (statut: " + copy.getStatus() + ")");
             unavailableMessage.getStyle().set("color", "var(--lumo-error-color)");
@@ -811,14 +801,14 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
         int loanDuration = settings.isPresent() ? settings.get().getLoanDurationDays() : 21; // 21 jours par défaut
 
         newLoan.setReturnDueDate(LocalDate.now().plusDays(loanDuration));
-        newLoan.setStatus("borrowed");
+        newLoan.setStatus(StatusUtils.LoanStatus.BORROWED);
 
         try {
             // Enregistrer l'emprunt
             LoanDto savedLoan = loanService.save(newLoan);
 
             // Mettre à jour le statut de la copie
-            selectedCopy.setStatus("borrowed");
+            selectedCopy.setStatus(StatusUtils.ItemStatus.BORROWED);
             copyService.save(selectedCopy);
 
             showNotification("Emprunt créé avec succès. Date de retour prévue: " +
@@ -850,19 +840,19 @@ public class BenevoleEmpruntView extends Composite<VerticalLayout> {
 
     private void cancelLoan(LoanDto loan) {
         // Vérifier que l'emprunt est bien actif
-        if (!"borrowed".equals(loan.getStatus())) {
+        if (!StatusUtils.LoanStatus.BORROWED.equals(loan.getStatus())) {
             showNotification("Cet emprunt ne peut pas être annulé car il n'est pas actif", "error");
             return;
         }
 
         try {
             // Mettre à jour le statut de l'emprunt
-            loan.setStatus("canceled");
+            loan.setStatus(StatusUtils.LoanStatus.CANCELED);
             loanService.save(loan);
 
             // Mettre à jour le statut de la copie
             CopyDto copy = loan.getCopy();
-            copy.setStatus("available");
+            copy.setStatus(StatusUtils.ItemStatus.AVAILABLE);
             copyService.save(copy);
 
             showNotification("Emprunt annulé avec succès", "success");

@@ -1,9 +1,9 @@
 package com.example.application.views.myview;
 
-import com.example.application.entity.*;
 import com.example.application.entity.DTO.*;
 import com.example.application.objectcustom.MoisOption;
 import com.example.application.service.implementation.*;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
@@ -97,7 +97,10 @@ public class CatalogueView extends VerticalLayout {
     private void configureComponents() {
         // Initialisation des composants
         typeComboBox = new ComboBox<>("Type d'item");
-        typeComboBox.setItems("Tous", "Livre", "Revue", "Jeu");
+        typeComboBox.setItems("Tous",
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.BOOK),
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.MAGAZINE),
+                StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.BOARD_GAME));
         typeComboBox.setValue("Tous");
 
         searchFieldsLayout = new FormLayout();
@@ -153,11 +156,11 @@ public class CatalogueView extends VerticalLayout {
 
         selectedType = typeComboBox.getValue();
 
-        if ("Livre".equals(selectedType)) {
+        if (StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.BOOK).equals(selectedType)) {
             createBookSearchFields();
-        } else if ("Revue".equals(selectedType)) {
+        } else if (StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.MAGAZINE).equals(selectedType)) {
             createMagazineSearchFields();
-        } else if ("Jeu".equals(selectedType)) {
+        } else if (StatusUtils.DocTypes.toFrench(StatusUtils.DocTypes.BOARD_GAME).equals(selectedType)) {
             createGameSearchFields();
         } else {
             createGeneralSearchFields();
@@ -302,21 +305,6 @@ public class CatalogueView extends VerticalLayout {
             int limit = query.getLimit();
             return itemService.fetchItemsWithFilters(searchCriteria, selectedType, offset, limit).stream();
         });
-
-
-    }
-
-    private String translateType(String type) {
-        switch (type) {
-            case "book":
-                return "Livre";
-            case "magazine":
-                return "Revue";
-            case "board_game":
-                return "Jeu";
-            default:
-                return type;
-        }
     }
 
     private void configureGrid() {
@@ -331,7 +319,7 @@ public class CatalogueView extends VerticalLayout {
 
 
         resultsGrid.addColumn(ItemDto::getTitle).setHeader("Titre").setResizable(true);
-        resultsGrid.addColumn(item -> translateType(item.getType())).setHeader("Type").setResizable(true);
+        resultsGrid.addColumn(item -> StatusUtils.DocTypes.toFrench(item.getType())).setHeader("Type").setResizable(true);
         resultsGrid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setResizable(true);
         resultsGrid.addColumn(item -> item.getPublisher().getName()).setHeader("Éditeur").setResizable(true);
 

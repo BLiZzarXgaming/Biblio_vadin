@@ -6,6 +6,7 @@ import com.example.application.entity.DTO.UserDto;
 import com.example.application.service.implementation.CopyServiceV2;
 import com.example.application.service.implementation.LoanServiceV2;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.Key;
@@ -154,13 +155,7 @@ public class BenevoleRetourView extends Composite<VerticalLayout> {
         activeBorrowsGrid.addColumn(loan -> loan.getCopy().getItem().getTitle()).setHeader("Titre")
                 .setAutoWidth(true).setFlexGrow(1);
         activeBorrowsGrid.addColumn(loan -> {
-            String type = loan.getCopy().getItem().getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(loan.getCopy().getItem().getType());
         }).setHeader("Type").setAutoWidth(true).setFlexGrow(0);
         activeBorrowsGrid.addColumn(loan -> loan.getLoanDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 .setHeader("Date d'emprunt").setAutoWidth(true).setFlexGrow(0);
@@ -249,7 +244,7 @@ public class BenevoleRetourView extends Composite<VerticalLayout> {
         selectedMember = user.get();
 
         // Vérifier si c'est un membre
-        if (!"MEMBRE".equals(selectedMember.getRole().getName().toUpperCase())) {
+        if (!StatusUtils.RoleName.MEMBRE.equals(selectedMember.getRole().getName())) {
             showNotification("L'utilisateur n'est pas un membre", "error");
             resetView();
             return;
@@ -257,7 +252,7 @@ public class BenevoleRetourView extends Composite<VerticalLayout> {
 
         // Récupérer les emprunts actifs du membre
         activeLoans = loanService.findByMember(selectedMember.getId()).stream()
-                .filter(loan -> "borrowed".equals(loan.getStatus()))
+                .filter(loan -> StatusUtils.LoanStatus.BORROWED.equals(loan.getStatus()))
                 .toList();
 
         if (activeLoans.isEmpty()) {
@@ -346,12 +341,12 @@ public class BenevoleRetourView extends Composite<VerticalLayout> {
         for (LoanDto loan : selectedLoansForReturn) {
             try {
                 // Mettre à jour le statut de l'emprunt
-                loan.setStatus("returned");
+                loan.setStatus(StatusUtils.LoanStatus.RETURNED);
                 loanService.save(loan);
 
                 // Mettre à jour le statut de la copie
                 CopyDto copy = loan.getCopy();
-                copy.setStatus("available");
+                copy.setStatus(StatusUtils.ItemStatus.AVAILABLE);
                 copyService.save(copy);
 
                 successCount++;

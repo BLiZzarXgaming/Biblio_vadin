@@ -6,6 +6,7 @@ import com.example.application.entity.DTO.UserDto;
 import com.example.application.entity.User;
 import com.example.application.service.implementation.AvailabilityServiceV2;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.example.application.config.SecurityService;
 import com.example.application.identification_user.MyUserPrincipal;
@@ -107,13 +108,6 @@ public class AdminCalendarView extends VerticalLayout {
     private Set<AvailabilityDto> selectedEvents = new HashSet<>();
     private Set<AvailabilityDto> selectedOpenHours = new HashSet<>();
 
-    // Constants
-    private static final String TYPE_EVENT = "event";
-    private static final String TYPE_OPENING_HOURS = "heureOuverture";
-    private static final String STATUS_CONFIRMED = "Confirmed";
-    private static final String STATUS_DRAFT = "Draft";
-    private static final String STATUS_CANCELLED = "Cancelled";
-
     public AdminCalendarView(AvailabilityServiceV2 availabilityService, UserServiceV2 userService,
             SecurityService securityService) {
         this.availabilityService = availabilityService;
@@ -200,7 +194,7 @@ public class AdminCalendarView extends VerticalLayout {
         Button eventsSearchButton = new Button("Rechercher", e -> searchEvents());
         Button eventsResetButton = new Button("Réinitialiser", e -> resetEventsSearch());
         Button eventsDeleteSelectedButton = new Button("Supprimer la sélection",
-                e -> confirmDeleteMultiple(selectedEvents, TYPE_EVENT));
+                e -> confirmDeleteMultiple(selectedEvents, StatusUtils.AvailabilityType.EVENT));
         eventsDeleteSelectedButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
 
         HorizontalLayout eventsFilterLayout = new HorizontalLayout(
@@ -214,7 +208,7 @@ public class AdminCalendarView extends VerticalLayout {
         Button openHoursSearchButton = new Button("Rechercher", e -> searchOpenHours());
         Button openHoursResetButton = new Button("Réinitialiser", e -> resetOpenHoursSearch());
         Button openHoursDeleteSelectedButton = new Button("Supprimer la sélection",
-                e -> confirmDeleteMultiple(selectedOpenHours, TYPE_OPENING_HOURS));
+                e -> confirmDeleteMultiple(selectedOpenHours, StatusUtils.AvailabilityType.HEUREOUVERTURE));
         openHoursDeleteSelectedButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
 
         HorizontalLayout openHoursFilterLayout = new HorizontalLayout(
@@ -359,9 +353,9 @@ public class AdminCalendarView extends VerticalLayout {
             String entryId = event.getEntry().getCustomProperty("id");
             Long availabilityId = Long.parseLong(entryId);
             availabilityService.findById(availabilityId).ifPresent(availability -> {
-                if (TYPE_EVENT.equals(availability.getType())) {
+                if (StatusUtils.AvailabilityType.EVENT.equals(availability.getType())) {
                     showEventDialog(availability);
-                } else if (TYPE_OPENING_HOURS.equals(availability.getType())) {
+                } else if (StatusUtils.AvailabilityType.HEUREOUVERTURE.equals(availability.getType())) {
                     showOpeningHoursDialog(availability);
                 }
             });
@@ -396,13 +390,13 @@ public class AdminCalendarView extends VerticalLayout {
             Span badge = new Span(availability.getStatus());
             badge.getElement().getThemeList().add("badge");
 
-            if (STATUS_CONFIRMED.equals(availability.getStatus())) {
+            if (StatusUtils.AvailabilityStatus.CONFIRMED.equals(availability.getStatus())) {
                 badge.getElement().getThemeList().add("success");
                 badge.setText("Confirmé");
-            } else if (STATUS_DRAFT.equals(availability.getStatus())) {
+            } else if (StatusUtils.AvailabilityStatus.DRAFT.equals(availability.getStatus())) {
                 badge.getElement().getThemeList().add("contrast");
                 badge.setText("Brouillon");
-            } else if (STATUS_CANCELLED.equals(availability.getStatus())) {
+            } else if (StatusUtils.AvailabilityStatus.CANCELED.equals(availability.getStatus())) {
                 badge.getElement().getThemeList().add("error");
                 badge.setText("Annulé");
             }
@@ -455,13 +449,13 @@ public class AdminCalendarView extends VerticalLayout {
             Span badge = new Span(availability.getStatus());
             badge.getElement().getThemeList().add("badge");
 
-            if (STATUS_CONFIRMED.equals(availability.getStatus())) {
+            if (StatusUtils.AvailabilityStatus.CONFIRMED.equals(availability.getStatus())) {
                 badge.getElement().getThemeList().add("success");
                 badge.setText("Confirmé");
-            } else if (STATUS_DRAFT.equals(availability.getStatus())) {
+            } else if (StatusUtils.AvailabilityStatus.DRAFT.equals(availability.getStatus())) {
                 badge.getElement().getThemeList().add("contrast");
                 badge.setText("Brouillon");
-            } else if (STATUS_CANCELLED.equals(availability.getStatus())) {
+            } else if (StatusUtils.AvailabilityStatus.CANCELED.equals(availability.getStatus())) {
                 badge.getElement().getThemeList().add("error");
                 badge.setText("Annulé");
             }
@@ -493,7 +487,7 @@ public class AdminCalendarView extends VerticalLayout {
         ConfirmDialog dialog = new ConfirmDialog();
         dialog.setHeader("Confirmer la suppression");
 
-        String itemType = TYPE_EVENT.equals(availability.getType()) ? "l'événement" : "les heures d'ouverture";
+        String itemType = StatusUtils.AvailabilityType.EVENT.equals(availability.getType()) ? "l'événement" : "les heures d'ouverture";
         dialog.setText("Êtes-vous sûr de vouloir supprimer " + itemType + " \"" + availability.getTitle() + "\" ?");
 
         dialog.setCancelable(true);
@@ -516,11 +510,11 @@ public class AdminCalendarView extends VerticalLayout {
                 // font dans le thread UI
                 UI.getCurrent().access(() -> {
                     // Forcer le rafraîchissement des données selon le type d'élément supprimé
-                    if (TYPE_EVENT.equals(elementType)) {
+                    if (StatusUtils.AvailabilityType.EVENT.equals(elementType)) {
                         log.info("Rafraîchissement de la liste des événements après suppression de l'ID " + elementId);
                         eventsCurrentPage = 0;
                         loadEventsData();
-                    } else if (TYPE_OPENING_HOURS.equals(elementType)) {
+                    } else if (StatusUtils.AvailabilityType.HEUREOUVERTURE.equals(elementType)) {
                         log.info("Rafraîchissement de la liste des heures d'ouverture après suppression de l'ID "
                                 + elementId);
                         openHoursCurrentPage = 0;
@@ -576,8 +570,8 @@ public class AdminCalendarView extends VerticalLayout {
         detailsField.setHeight("100px");
 
         ComboBox<String> statusField = new ComboBox<>("Statut");
-        statusField.setItems(STATUS_DRAFT, STATUS_CONFIRMED, STATUS_CANCELLED);
-        statusField.setValue(STATUS_CONFIRMED); // Default to confirmed
+        statusField.setItems(StatusUtils.AvailabilityStatus.DRAFT, StatusUtils.AvailabilityStatus.CONFIRMED, StatusUtils.AvailabilityStatus.CANCELED);
+        statusField.setValue(StatusUtils.AvailabilityStatus.CONFIRMED); // Default to confirmed
 
         // Recurrence options
         ComboBox<String> recurrenceTypeField = new ComboBox<>("Récurrence");
@@ -654,7 +648,7 @@ public class AdminCalendarView extends VerticalLayout {
                                 timeField.getValue(),
                                 durationField.getValue(),
                                 detailsField.getValue(),
-                                TYPE_EVENT,
+                                StatusUtils.AvailabilityType.EVENT,
                                 statusField.getValue());
                         // S'assurer que l'utilisateur est défini
                         newEvent.setUser(currentUser);
@@ -746,8 +740,8 @@ public class AdminCalendarView extends VerticalLayout {
         detailsField.setHeight("100px");
 
         ComboBox<String> statusField = new ComboBox<>("Statut");
-        statusField.setItems(STATUS_DRAFT, STATUS_CONFIRMED, STATUS_CANCELLED);
-        statusField.setValue(STATUS_CONFIRMED); // Default to confirmed
+        statusField.setItems(StatusUtils.AvailabilityStatus.DRAFT, StatusUtils.AvailabilityStatus.CONFIRMED, StatusUtils.AvailabilityStatus.CANCELED);
+        statusField.setValue(StatusUtils.AvailabilityStatus.CONFIRMED); // Default to confirmed
 
         // Special calculate duration span
         Div durationInfo = new Div();
@@ -874,7 +868,7 @@ public class AdminCalendarView extends VerticalLayout {
                                 openTimeField.getValue(),
                                 durationMinutes,
                                 detailsField.getValue(),
-                                TYPE_OPENING_HOURS,
+                                StatusUtils.AvailabilityType.HEUREOUVERTURE,
                                 statusField.getValue());
                         // S'assurer que l'utilisateur est défini
                         newHours.setUser(currentUser);
@@ -893,7 +887,7 @@ public class AdminCalendarView extends VerticalLayout {
                                 dayOfWeekField.getValue());
 
                         for (AvailabilityDto hours : recurringHours) {
-                            hours.setType(TYPE_OPENING_HOURS);
+                            hours.setType(StatusUtils.AvailabilityType.HEUREOUVERTURE);
                             // S'assurer que l'utilisateur est défini pour chaque entrée récurrente
                             hours.setUser(currentUser);
                             availabilityService.save(hours);
@@ -968,7 +962,7 @@ public class AdminCalendarView extends VerticalLayout {
         for (int i = 0; i < recurrenceCount; i++) {
             // Create event for current date
             AvailabilityDto event = createNewAvailability(
-                    title, currentDate, time, duration, details, TYPE_EVENT, status);
+                    title, currentDate, time, duration, details, StatusUtils.AvailabilityType.EVENT, status);
             recurringEvents.add(event);
 
             // Calculate next date based on recurrence type
@@ -1007,7 +1001,7 @@ public class AdminCalendarView extends VerticalLayout {
 
         // Add each availability to the calendar
         for (AvailabilityDto availability : availabilities) {
-            if (STATUS_CONFIRMED.equals(availability.getStatus())) {
+            if (StatusUtils.AvailabilityStatus.CONFIRMED.equals(availability.getStatus())) {
                 Entry entry = new Entry();
 
                 // Dans FullCalendar 6.x, on utilise une propriété personnalisée pour l'ID
@@ -1024,9 +1018,9 @@ public class AdminCalendarView extends VerticalLayout {
                 entry.setEnd(end);
 
                 // Set color based on type
-                if (TYPE_EVENT.equals(availability.getType())) {
+                if (StatusUtils.AvailabilityType.EVENT.equals(availability.getType())) {
                     entry.setColor("#6200EA"); // Purple for events
-                } else if (TYPE_OPENING_HOURS.equals(availability.getType())) {
+                } else if (StatusUtils.AvailabilityType.HEUREOUVERTURE.equals(availability.getType())) {
                     entry.setColor("#00C853"); // Green for opening hours
                 }
 
@@ -1040,7 +1034,7 @@ public class AdminCalendarView extends VerticalLayout {
         // Vérifier si des filtres de date sont appliqués
         if (eventsStartDateFilter.getValue() != null && eventsEndDateFilter.getValue() != null) {
             List<AvailabilityDto> events = availabilityService.findByTypeAndDateBetween(
-                    TYPE_EVENT,
+                    StatusUtils.AvailabilityType.EVENT,
                     eventsStartDateFilter.getValue(),
                     eventsEndDateFilter.getValue());
 
@@ -1059,11 +1053,11 @@ public class AdminCalendarView extends VerticalLayout {
         } else {
             // Utiliser la pagination du service si aucun filtre n'est appliqué
             List<AvailabilityDto> events = availabilityService.findByTypeWithPagination(
-                    TYPE_EVENT, eventsCurrentPage * pageSize, pageSize);
+                    StatusUtils.AvailabilityType.EVENT, eventsCurrentPage * pageSize, pageSize);
             eventsGrid.setItems(events);
 
             // Mettre à jour le total pour la pagination
-            totalEvents = availabilityService.countByType(TYPE_EVENT);
+            totalEvents = availabilityService.countByType(StatusUtils.AvailabilityType.EVENT);
         }
 
         // Mettre à jour les contrôles de pagination
@@ -1078,7 +1072,7 @@ public class AdminCalendarView extends VerticalLayout {
         // Vérifier si des filtres de date sont appliqués
         if (openHoursStartDateFilter.getValue() != null && openHoursEndDateFilter.getValue() != null) {
             List<AvailabilityDto> openingHours = availabilityService.findByTypeAndDateBetween(
-                    TYPE_OPENING_HOURS,
+                    StatusUtils.AvailabilityType.HEUREOUVERTURE,
                     openHoursStartDateFilter.getValue(),
                     openHoursEndDateFilter.getValue());
 
@@ -1097,11 +1091,11 @@ public class AdminCalendarView extends VerticalLayout {
         } else {
             // Utiliser la pagination du service si aucun filtre n'est appliqué
             List<AvailabilityDto> openingHours = availabilityService.findByTypeWithPagination(
-                    TYPE_OPENING_HOURS, openHoursCurrentPage * pageSize, pageSize);
+                    StatusUtils.AvailabilityType.HEUREOUVERTURE, openHoursCurrentPage * pageSize, pageSize);
             openHoursGrid.setItems(openingHours);
 
             // Mettre à jour le total pour la pagination
-            totalOpenHours = availabilityService.countByType(TYPE_OPENING_HOURS);
+            totalOpenHours = availabilityService.countByType(StatusUtils.AvailabilityType.HEUREOUVERTURE);
         }
 
         // Mettre à jour les contrôles de pagination
@@ -1211,7 +1205,7 @@ public class AdminCalendarView extends VerticalLayout {
             // font dans le thread UI
             UI.getCurrent().access(() -> {
                 // Recharger les données après la suppression
-                if (finalType.equals(TYPE_EVENT)) {
+                if (finalType.equals(StatusUtils.AvailabilityType.EVENT)) {
                     log.info("Rafraîchissement de la liste des événements après suppression multiple");
                     eventsCurrentPage = 0;
                     loadEventsData();

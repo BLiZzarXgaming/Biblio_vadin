@@ -11,6 +11,7 @@ import com.example.application.service.implementation.ItemServiceV2;
 import com.example.application.service.implementation.LoanServiceV2;
 import com.example.application.service.implementation.MagazineServiceV2;
 import com.example.application.service.implementation.ReservationServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Composite;
@@ -209,16 +210,7 @@ public class BenevoleHomeView extends Composite<VerticalLayout> {
 
         grid.addColumn(ItemDto::getTitle).setHeader("Titre").setFlexGrow(2);
         grid.addColumn(item -> {
-            switch (item.getType()) {
-                case "book":
-                    return "Livre";
-                case "magazine":
-                    return "Revue";
-                case "board_game":
-                    return "Jeu";
-                default:
-                    return item.getType();
-            }
+            return StatusUtils.DocTypes.toFrench(item.getType());
         }).setHeader("Type").setFlexGrow(1);
         grid.addColumn(item -> item.getCategory().getName()).setHeader("Catégorie").setFlexGrow(1);
         grid.addColumn(item -> item.getCreatedAt() != null ? DateTimeFormatter.ofPattern("dd/MM/yyyy").format(
@@ -271,17 +263,7 @@ public class BenevoleHomeView extends Composite<VerticalLayout> {
         grid.addColumn(loan -> loan.getCopy().getItem().getTitle())
                 .setHeader("Document").setFlexGrow(2);
         grid.addColumn(loan -> {
-            String type = loan.getCopy().getItem().getType();
-            switch (type) {
-                case "book":
-                    return "Livre";
-                case "magazine":
-                    return "Revue";
-                case "board_game":
-                    return "Jeu";
-                default:
-                    return type;
-            }
+            return StatusUtils.DocTypes.toFrench(loan.getCopy().getItem().getType());
         }).setHeader("Type").setFlexGrow(1);
         grid.addColumn(loan -> loan.getLoanDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                 .setHeader("Date d'emprunt").setFlexGrow(1);
@@ -333,12 +315,12 @@ public class BenevoleHomeView extends Composite<VerticalLayout> {
     // Méthodes pour récupérer les données
 
     private int countActiveLoans() {
-        return loanService.findByStatus("borrowed").size();
+        return loanService.findByStatus(StatusUtils.LoanStatus.BORROWED).size();
     }
 
     private int countOverdueLoans() {
         LocalDate today = LocalDate.now();
-        return loanService.findByStatus("borrowed").stream()
+        return loanService.findByStatus(StatusUtils.LoanStatus.BORROWED).stream()
                 .filter(loan -> loan.getReturnDueDate().isBefore(today))
                 .collect(Collectors.toList())
                 .size();
@@ -347,14 +329,14 @@ public class BenevoleHomeView extends Composite<VerticalLayout> {
     private int countTodayReturns() {
         LocalDate today = LocalDate.now();
         return loanService.findAll().stream()
-                .filter(loan -> "returned".equals(loan.getStatus()) &&
+                .filter(loan -> StatusUtils.LoanStatus.RETURNED.equals(loan.getStatus()) &&
                         loan.getReturnDueDate().equals(today))
                 .collect(Collectors.toList())
                 .size();
     }
 
     private int countPendingReservations() {
-        return reservationService.findByStatus("reserved").size();
+        return reservationService.findByStatus(StatusUtils.ReservationStatus.PENDING).size();
     }
 
     private List<ItemDto> getRecentItems(int limit) {
@@ -367,7 +349,7 @@ public class BenevoleHomeView extends Composite<VerticalLayout> {
 
     private List<LoanDto> getLoansReturnDueToday() {
         LocalDate today = LocalDate.now();
-        return loanService.findByStatus("borrowed").stream()
+        return loanService.findByStatus(StatusUtils.LoanStatus.BORROWED).stream()
                 .filter(loan -> loan.getReturnDueDate().equals(today))
                 .collect(Collectors.toList());
     }

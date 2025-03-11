@@ -6,6 +6,7 @@ import com.example.application.entity.User;
 import com.example.application.service.implementation.ReservationServiceV2;
 import com.example.application.service.implementation.UserRelationshipService;
 import com.example.application.service.implementation.UserServiceV2;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -184,13 +185,7 @@ public class MembreReservationsView extends VerticalLayout {
                 .setFlexGrow(1);
 
         reservationsGrid.addColumn(reservation -> {
-            String type = reservation.getCopy().getItem().getType();
-            return switch (type) {
-                case "book" -> "Livre";
-                case "magazine" -> "Revue";
-                case "board_game" -> "Jeu";
-                default -> type;
-            };
+            return StatusUtils.DocTypes.toFrench(reservation.getCopy().getItem().getType());
         }).setHeader("Type").setWidth("120px").setFlexGrow(0);
 
         reservationsGrid
@@ -204,16 +199,16 @@ public class MembreReservationsView extends VerticalLayout {
             statusBadge.getElement().getThemeList().add("badge");
 
             switch (reservation.getStatus()) {
-                case "reserved":
-                    statusBadge.setText("En attente");
+                case StatusUtils.ReservationStatus.PENDING:
+                    statusBadge.setText(StatusUtils.ReservationStatus.toFrench(reservation.getStatus()));
                     statusBadge.getElement().getThemeList().add("contrast");
                     break;
-                case "ready":
-                    statusBadge.setText("Prêt à récupérer");
+                case StatusUtils.ReservationStatus.READY:
+                    statusBadge.setText(StatusUtils.ReservationStatus.toFrench(reservation.getStatus()));
                     statusBadge.getElement().getThemeList().add("success");
                     break;
-                case "cancelled":
-                    statusBadge.setText("Annulée");
+                case StatusUtils.ReservationStatus.CANCELLED:
+                    statusBadge.setText(StatusUtils.ReservationStatus.toFrench(reservation.getStatus()));
                     statusBadge.getElement().getThemeList().add("error");
                     break;
                 default:
@@ -226,7 +221,7 @@ public class MembreReservationsView extends VerticalLayout {
         // Actions column
         reservationsGrid.addComponentColumn(reservation -> {
             // Only show cancel button for active reservations
-            if (!"cancelled".equals(reservation.getStatus())) {
+            if (!StatusUtils.ReservationStatus.CANCELLED.equals(reservation.getStatus())) {
                 Button cancelButton = new Button("Annuler");
                 cancelButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
                 cancelButton.addClickListener(e -> confirmCancelReservation(reservation));

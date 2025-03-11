@@ -5,6 +5,7 @@ import com.example.application.entity.*;
 import com.example.application.entity.DTO.*;
 import com.example.application.objectcustom.DocumentType;
 import com.example.application.service.implementation.*;
+import com.example.application.utils.StatusUtils;
 import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
@@ -94,9 +95,9 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
         content = new VerticalLayout();
 
         typeDocComboBox.setItems(
-                new DocumentType("livre", "book"),
-                new DocumentType("magazine", "magazine"),
-                new DocumentType("jeu", "board_game"));
+                new DocumentType(StatusUtils.DocTypes.LIVRE, StatusUtils.DocTypes.BOOK),
+                new DocumentType(StatusUtils.DocTypes.REVUE, StatusUtils.DocTypes.MAGAZINE),
+                new DocumentType(StatusUtils.DocTypes.JEU, StatusUtils.DocTypes.BOARD_GAME));
 
         typeDocComboBox.setItemLabelGenerator(DocumentType::getDisplayName);
 
@@ -104,7 +105,7 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
             String type = event.getValue().getReturnValue();
             searchButton = new Button("Rechercher"); // todo: empêcher d'ajouter plusieurs fois l'ui
             switch (type) {
-                case "book":
+                case StatusUtils.DocTypes.BOOK:
                     content.removeAll();
                     booksForm = new BooksForm(bookService, itemService);
 
@@ -134,7 +135,7 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
 
                     content.add(booksForm, searchButton);
                     break;
-                case "magazine":
+                case StatusUtils.DocTypes.MAGAZINE:
                     content.removeAll();
                     magazinesForm = new MagazinesForm(magazineService, itemService);
 
@@ -163,7 +164,7 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
 
                     content.add(magazinesForm, searchButton);
                     break;
-                case "board_game":
+                case StatusUtils.DocTypes.BOARD_GAME:
                     content.removeAll();
                     boardGamesForm = new BoardGamesForm(boardGameService, itemService);
 
@@ -219,16 +220,16 @@ public class BenevoleAjouterView extends Composite<VerticalLayout> {
 
         try {
             switch (type) {
-                case "book":
+                case StatusUtils.DocTypes.BOOK:
                     BookDto book = booksForm.getBookInfo();
                     ItemDto resultItem = documentAdditionService.addBook(item, book, copiesForm.getCopies());
                     booksForm.setbookItemid(resultItem.getId());
                     break;
-                case "magazine":
+                case StatusUtils.DocTypes.MAGAZINE:
                     MagazineDto magazine = magazinesForm.getMagazineInfo();
                     documentAdditionService.addMagazine(item, magazine, copiesForm.getCopies());
                     break;
-                case "board_game":
+                case StatusUtils.DocTypes.BOARD_GAME:
                     BoardGameDto boardGame = boardGamesForm.getBoardGame();
                     documentAdditionService.addBoardGame(item, boardGame, copiesForm.getCopies());
                     break;
