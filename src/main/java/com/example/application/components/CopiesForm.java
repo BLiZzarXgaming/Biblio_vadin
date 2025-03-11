@@ -6,6 +6,7 @@ import com.example.application.entity.DTO.ItemDto;
 import com.example.application.entity.Item;
 import com.example.application.service.implementation.CopyServiceV2;
 import com.example.application.utils.DateUtils;
+import com.example.application.utils.StatusUtils;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -22,23 +23,6 @@ import java.util.List;
 
 public class CopiesForm extends VerticalLayout {
 
-    private enum Type {
-        AVAILABLE("available"),
-        UNAVAILABLE("unavailable"),
-        BORROWED("borrowed"),
-        RESERVED("reserved"),
-        DELETED("deleted");
-
-        private final String value;
-
-        Type(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return value;
-        }
-    }
     // item_id
     // status
     // acquisition_date
@@ -147,7 +131,7 @@ public class CopiesForm extends VerticalLayout {
         idTempscount++;
         copy.setAcquisitionDate(acquisition_date.getValue());
         copy.setPrice(price.getValue());
-        copy.setStatus(Type.AVAILABLE.getValue());
+        copy.setStatus(StatusUtils.ItemStatus.AVAILABLE);
         copiesDataGrid.add(copy);
         updateGrid();
 

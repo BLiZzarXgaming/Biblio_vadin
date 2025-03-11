@@ -4,6 +4,7 @@ import com.example.application.entity.DTO.LoanDto;
 import com.example.application.entity.Mapper.LoanMapper;
 import com.example.application.repository.LoanRepositoryV2;
 import com.example.application.service.implementation.LoanServiceV2;
+import com.example.application.utils.StatusUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -109,7 +110,7 @@ public class LoanServiceImplV2 implements LoanServiceV2 {
             return result;
         } catch (Exception e) {
             LOGGER.warning("Erreur lors de la récupération des prêts par mois: " + e.getMessage());
-            return getDefaultLoansByMonth();
+            return null;
         }
     }
 
@@ -127,7 +128,7 @@ public class LoanServiceImplV2 implements LoanServiceV2 {
             if (results != null && !results.isEmpty()) {
                 for (Object[] result : results) {
                     if (result != null && result.length >= 2 && result[0] != null && result[1] != null) {
-                        String status = translateStatus(result[0].toString());
+                        String status = StatusUtils.LoanStatus.toFrench(result[0].toString());
                         Integer count = ((Number) result[1]).intValue();
                         loansByStatus.put(status, count);
                     }
@@ -137,25 +138,7 @@ public class LoanServiceImplV2 implements LoanServiceV2 {
             return loansByStatus;
         } catch (Exception e) {
             LOGGER.warning("Erreur lors de la récupération des prêts par statut: " + e.getMessage());
-            return createDefaultStatuses();
-        }
-    }
-
-    // Méthode utilitaire pour traduire le statut technique en terme convivial
-    private String translateStatus(String status) {
-        switch (status) {
-            case "EMPRUNTE":
-                return "Emprunté";
-            case "RENDU":
-                return "Rendu";
-            case "PERDU":
-                return "Perdu";
-            case "RESERVE":
-                return "Réservé";
-            case "ANNULE":
-                return "Annulé";
-            default:
-                return status;
+            return null;
         }
     }
 
@@ -167,36 +150,5 @@ public class LoanServiceImplV2 implements LoanServiceV2 {
             return months[month - 1];
         }
         return "Inconnu";
-    }
-
-    // Méthode utilitaire pour obtenir des valeurs par défaut pour les prêts par
-    // mois
-    private Map<String, Integer> getDefaultLoansByMonth() {
-        Map<String, Integer> months = new LinkedHashMap<>();
-        months.put("Janvier", 42);
-        months.put("Février", 38);
-        months.put("Mars", 45);
-        months.put("Avril", 52);
-        months.put("Mai", 48);
-        months.put("Juin", 40);
-        months.put("Juillet", 35);
-        months.put("Août", 30);
-        months.put("Septembre", 50);
-        months.put("Octobre", 55);
-        months.put("Novembre", 60);
-        months.put("Décembre", 58);
-        return months;
-    }
-
-    // Méthode utilitaire pour obtenir des valeurs par défaut pour les prêts par
-    // statut
-    private Map<String, Integer> createDefaultStatuses() {
-        Map<String, Integer> statuses = new HashMap<>();
-        statuses.put("Emprunté", 120);
-        statuses.put("Rendu", 450);
-        statuses.put("Perdu", 15);
-        statuses.put("Réservé", 28);
-        statuses.put("Annulé", 8);
-        return statuses;
     }
 }

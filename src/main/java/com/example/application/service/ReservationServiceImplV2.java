@@ -6,6 +6,7 @@ import com.example.application.entity.Mapper.ReservationMapper;
 import com.example.application.entity.Mapper.UserMapper;
 import com.example.application.repository.ReservationRepositoryV2;
 import com.example.application.service.implementation.ReservationServiceV2;
+import com.example.application.utils.StatusUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -102,7 +103,7 @@ public class ReservationServiceImplV2 implements ReservationServiceV2 {
         Optional<ReservationDto> reservationOpt = findById(reservationId);
         if (reservationOpt.isPresent()) {
             ReservationDto reservation = reservationOpt.get();
-            reservation.setStatus("ready");
+            reservation.setStatus(StatusUtils.ReservationStatus.READY);
             return save(reservation);
         }
         throw new IllegalArgumentException("Réservation non trouvée avec l'ID: " + reservationId);
@@ -113,7 +114,7 @@ public class ReservationServiceImplV2 implements ReservationServiceV2 {
         Optional<ReservationDto> reservationOpt = findById(reservationId);
         if (reservationOpt.isPresent()) {
             ReservationDto reservation = reservationOpt.get();
-            reservation.setStatus("reserved");
+            reservation.setStatus(StatusUtils.ReservationStatus.PENDING);
             return save(reservation);
         }
         throw new IllegalArgumentException("Réservation non trouvée avec l'ID: " + reservationId);

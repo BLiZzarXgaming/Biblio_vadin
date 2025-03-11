@@ -7,6 +7,7 @@ import com.example.application.entity.Mapper.ItemMapper;
 import com.example.application.repository.ItemRepositoryV2;
 import com.example.application.repository.CopyRepositoryV2;
 import com.example.application.service.implementation.ItemServiceV2;
+import com.example.application.utils.StatusUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -75,7 +76,7 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
     public List<ItemDto> fetchItemsWithFilters(Map<String, Object> searchCriteria, String selectedType, int offset,
             int limit) {
         Pageable pageable = PageRequest.of(offset / limit, limit); // Pageable object for pagination
-        if ("Livre".equals(selectedType)) { // Book
+        if (StatusUtils.DocTypes.LIVRE.equals(selectedType)) { // Book
             return itemRepository.findBookByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (String) searchCriteria.get("author"),
@@ -86,7 +87,7 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
                     searchCriteria.get("publisher") != null ? ((PublisherDto) searchCriteria.get("publisher")).getId()
                             : null,
                     pageable).stream().map(itemMapper::toDto).collect(Collectors.toList());
-        } else if ("Revue".equals(selectedType)) { // Magazine
+        } else if (StatusUtils.DocTypes.REVUE.equals(selectedType)) { // Magazine
             return itemRepository.findMagazineByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (String) searchCriteria.get("isni"),
@@ -98,7 +99,7 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
                             : null,
                     searchCriteria.get("year") != null ? (Integer) searchCriteria.get("year") : null,
                     pageable).stream().map(itemMapper::toDto).collect(Collectors.toList());
-        } else if ("Jeu".equals(selectedType)) { // BoardGame
+        } else if (StatusUtils.DocTypes.JEU.equals(selectedType)) { // BoardGame
             return itemRepository.findBoardGameByCriteriaWithPagination(
                     (String) searchCriteria.get("title"),
                     (Integer) searchCriteria.get("numberOfPieces"),
@@ -131,15 +132,15 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
 
         // Compter le nombre de documents par type
         itemsByType.put("Livres", allItems.stream()
-                .filter(item -> "book".equals(item.getType()))
+                .filter(item -> StatusUtils.DocTypes.BOOK.equals(item.getType()))
                 .count());
 
         itemsByType.put("Magazines", allItems.stream()
-                .filter(item -> "magazine".equals(item.getType()))
+                .filter(item -> StatusUtils.DocTypes.MAGAZINE.equals(item.getType()))
                 .count());
 
         itemsByType.put("Jeux de société", allItems.stream()
-                .filter(item -> "board_game".equals(item.getType()))
+                .filter(item -> StatusUtils.DocTypes.BOARD_GAME.equals(item.getType()))
                 .count());
 
         return itemsByType;
@@ -186,14 +187,14 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
                 }
 
                 String typeLabel;
-                switch (type.toUpperCase()) {
-                    case "BOOK":
+                switch (type) {
+                    case StatusUtils.DocTypes.BOOK:
                         typeLabel = "Livres";
                         break;
-                    case "MAGAZINE":
+                    case StatusUtils.DocTypes.MAGAZINE:
                         typeLabel = "Magazines";
                         break;
-                    case "BOARD_GAME":
+                    case StatusUtils.DocTypes.BOARD_GAME:
                         typeLabel = "Jeux de société";
                         break;
                     default:
@@ -273,11 +274,11 @@ public class ItemServiceImplV2 implements ItemServiceV2 {
 
                 // Formatter selon le type
                 String typeLabel = "";
-                if ("book".equals(type)) {
+                if (StatusUtils.DocTypes.BOOK.equals(type)) {
                     typeLabel = " (Livre)";
-                } else if ("magazine".equals(type)) {
+                } else if (StatusUtils.DocTypes.MAGAZINE.equals(type)) {
                     typeLabel = " (Magazine)";
-                } else if ("board_game".equals(type)) {
+                } else if (StatusUtils.DocTypes.BOARD_GAME.equals(type)) {
                     typeLabel = " (Jeu de société)";
                 }
 

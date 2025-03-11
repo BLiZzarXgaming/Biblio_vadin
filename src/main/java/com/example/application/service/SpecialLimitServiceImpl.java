@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.example.application.utils.StatusUtils;
 import org.springframework.stereotype.Service;
 
 import com.example.application.entity.SpecialLimit;
@@ -45,7 +46,7 @@ public class SpecialLimitServiceImpl implements SpecialLimitService {
     @Override
     public Optional<SpecialLimitDto> findActiveByUser(User user) {
         return specialLimitRepository.findFirstByUserOrderByCreatedAtDesc(user)
-                .filter(limit -> "active".equals(limit.getStatus()))
+                .filter(limit -> StatusUtils.SpecialLimit.ACTIVE.equals(limit.getStatus()))
                 .map(specialLimitMapper::toDto);
     }
 

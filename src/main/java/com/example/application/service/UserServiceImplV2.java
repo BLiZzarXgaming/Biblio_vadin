@@ -5,6 +5,7 @@ import com.example.application.entity.Mapper.UserMapper;
 import com.example.application.repository.UserRepositoryV2;
 import com.example.application.service.implementation.UserServiceV2;
 import com.example.application.utils.DateUtils;
+import com.example.application.utils.StatusUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -71,15 +72,15 @@ public class UserServiceImplV2 implements UserServiceV2 {
 
         // Compter le nombre d'utilisateurs par rôle
         usersByRole.put("Membres", allUsers.stream()
-                .filter(user -> user.getRole() != null && "Membre".equals(user.getRole().getName()))
+                .filter(user -> user.getRole() != null && StatusUtils.RoleName.MEMBRE.equals(user.getRole().getName()))
                 .count());
 
         usersByRole.put("Bénévoles", allUsers.stream()
-                .filter(user -> user.getRole() != null && "Bénévole".equals(user.getRole().getName()))
+                .filter(user -> user.getRole() != null && StatusUtils.RoleName.BENEVOLE.equals(user.getRole().getName()))
                 .count());
 
         usersByRole.put("Administrateurs", allUsers.stream()
-                .filter(user -> user.getRole() != null && "Administrateur".equals(user.getRole().getName()))
+                .filter(user -> user.getRole() != null && StatusUtils.RoleName.BENEVOLE.equals(user.getRole().getName()))
                 .count());
 
         return usersByRole;

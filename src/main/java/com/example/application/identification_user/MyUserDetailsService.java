@@ -13,6 +13,7 @@ public class MyUserDetailsService implements UserDetailsService {
     @Autowired
     private UserRepositoryV2 userRepository;
 
+    //TODO : handle user not active
     @Override
     public UserDetails loadUserByUsername(String username) {
         User user = userRepository.findUserByUsernameAndPassword(username);
