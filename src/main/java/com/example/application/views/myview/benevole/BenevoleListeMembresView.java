@@ -38,6 +38,7 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -59,6 +60,8 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
     private final UserRepositoryV2 userRepository;
     private final UserRelationshipService userRelationshipService;
 
+    private final PasswordEncoder passwordEncoder;
+
     // UI components
     private TextField searchField;
     private Grid<UserDto> membersGrid;
@@ -67,11 +70,12 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
     private HorizontalLayout parentSelectors;
 
     public BenevoleListeMembresView(UserServiceV2 userService, RoleRepository roleRepository,
-            UserRepositoryV2 userRepository, UserRelationshipService userRelationshipService) {
+            UserRepositoryV2 userRepository, UserRelationshipService userRelationshipService, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.userRelationshipService = userRelationshipService;
+        this.passwordEncoder = passwordEncoder;
 
         getContent().setSizeFull();
         getContent().setPadding(true);
@@ -419,7 +423,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
 
             // Update password if provided
             if (!passwordField.isEmpty()) {
-                member.setPassword(passwordField.getValue()); // In real app, this should be hashed
+                member.setPassword(passwordEncoder.encode(passwordField.getValue())); // In real app, this should be hashed
             }
 
             try {
@@ -601,7 +605,7 @@ public class BenevoleListeMembresView extends Composite<VerticalLayout> {
             newMember.setEmail(emailField.getValue());
             newMember.setPhoneNumber(phoneField.getValue());
             newMember.setCellNumber(cellField.getValue());
-            newMember.setPassword(passwordField.getValue()); // In real app, this should be hashed
+            newMember.setPassword(passwordEncoder.encode(passwordField.getValue())); // In real app, this should be hashed
             newMember.setStatus(StatusUtils.UserStatus.ACTIVE);
             newMember.setIsChild(childCheckbox.getValue());
 

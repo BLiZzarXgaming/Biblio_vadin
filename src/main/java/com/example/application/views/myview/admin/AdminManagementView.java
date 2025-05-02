@@ -33,6 +33,7 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -49,6 +50,7 @@ public class AdminManagementView extends VerticalLayout {
 
     private final UserServiceV2 userService;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // UI components
     private TextField searchField;
@@ -56,9 +58,10 @@ public class AdminManagementView extends VerticalLayout {
     private Button addAdminButton;
     private boolean isSuperAdmin = false;
 
-    public AdminManagementView(UserServiceV2 userService, RoleRepository roleRepository) {
+    public AdminManagementView(UserServiceV2 userService, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
 
         // Check if current user is SuperAdmin
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -278,7 +281,7 @@ public class AdminManagementView extends VerticalLayout {
 
             // Update password if provided
             if (!passwordField.isEmpty()) {
-                admin.setPassword(passwordField.getValue()); // In real app, this should be hashed
+                admin.setPassword(passwordEncoder.encode(passwordField.getValue())); // In real app, this should be hashed
             }
 
             try {
@@ -373,7 +376,7 @@ public class AdminManagementView extends VerticalLayout {
             newAdmin.setEmail(emailField.getValue());
             newAdmin.setPhoneNumber(phoneField.getValue());
             newAdmin.setCellNumber(cellField.getValue());
-            newAdmin.setPassword(passwordField.getValue()); // In real app, this should be hashed
+            newAdmin.setPassword(passwordEncoder.encode(passwordField.getValue())); // In real app, this should be hashed
             newAdmin.setStatus(StatusUtils.UserStatus.ACTIVE);
             newAdmin.setIsChild(false);
 

@@ -35,6 +35,7 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -52,6 +53,8 @@ public class AdminGestionBenevolesView extends VerticalLayout {
     private final UserServiceV2 userService;
     private final RoleRepository roleRepository;
 
+    private final PasswordEncoder passwordEncoder;
+
     // UI components
     private TextField searchField;
     private Grid<UserDto> benevolesGrid;
@@ -66,9 +69,10 @@ public class AdminGestionBenevolesView extends VerticalLayout {
     private ListDataProvider<UserDto> dataProvider;
     private Span pageInfoLabel;
 
-    public AdminGestionBenevolesView(UserServiceV2 userService, RoleRepository roleRepository) {
+    public AdminGestionBenevolesView(UserServiceV2 userService, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
 
         setSizeFull();
         setPadding(true);
@@ -368,7 +372,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
 
             // Update password if provided
             if (!passwordField.isEmpty()) {
-                benevole.setPassword(passwordField.getValue()); // In real app, this should be hashed
+                benevole.setPassword(passwordEncoder.encode(passwordField.getValue())); // In real app, this should be hashed
             }
 
             try {
@@ -459,7 +463,7 @@ public class AdminGestionBenevolesView extends VerticalLayout {
             newBenevole.setEmail(emailField.getValue());
             newBenevole.setPhoneNumber(phoneField.getValue());
             newBenevole.setCellNumber(cellField.getValue());
-            newBenevole.setPassword(passwordField.getValue()); // In real app, this should be hashed
+            newBenevole.setPassword(passwordEncoder.encode(passwordField.getValue())); // In real app, this should be hashed
             newBenevole.setStatus(StatusUtils.UserStatus.ACTIVE);
             newBenevole.setIsChild(false);
 
